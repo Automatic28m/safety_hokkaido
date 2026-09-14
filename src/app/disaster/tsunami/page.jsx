@@ -1,0 +1,1 @@
+export default function TsunamiPage() { return <div className="p-8 pt-24 min-h-screen text-center"><h1 className="text-3xl font-bold">Tsunami</h1><p className="mt-4">Placeholder content based on sitemap.</p></div>; }
