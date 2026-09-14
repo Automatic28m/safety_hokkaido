@@ -6,12 +6,19 @@ import ReactMarkdown from 'react-markdown';
 
 export default function ChatBot({ isOpen, onClose }) {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      role: 'ai',
-      content: "Hi! I'm Tamago, your Hokkaido AI Guide. Ask me anything about disaster procedures or weather!"
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
+
+  // Initialize first message on mount to avoid hydration mismatch with timestamps
+  useEffect(() => {
+    setMessages([
+      {
+        role: 'ai',
+        content: "Hi! I'm Tamago, your Hokkaido AI Guide. Ask me anything about disaster procedures or weather!",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+  }, []);
+
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -39,7 +46,11 @@ export default function ChatBot({ isOpen, onClose }) {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMsg = { role: 'user', content: input };
+    const userMsg = { 
+      role: 'user', 
+      content: input,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
     const newMessages = [...messages, userMsg];
     
     setMessages(newMessages);
@@ -60,13 +71,15 @@ export default function ChatBot({ isOpen, onClose }) {
       
       setMessages([...newMessages, {
         role: 'ai',
-        content: data.reply
+        content: data.reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages([...newMessages, {
         role: 'ai',
-        content: "Sorry, I couldn't connect to the server right now."
+        content: "Sorry, I couldn't connect to the server right now.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
     } finally {
       setIsLoading(false);
@@ -84,7 +97,7 @@ export default function ChatBot({ isOpen, onClose }) {
         aria-hidden="true"
       />
       
-      <div className="fixed top-24 bottom-8 left-[5%] right-[5%] sm:top-auto sm:left-auto sm:bottom-4 sm:right-4 sm:w-[400px] sm:h-[85vh] bg-white rounded-3xl shadow-2xl z-[100] flex flex-col overflow-hidden">
+      <div className="fixed top-6 bottom-8 left-[5%] right-[5%] sm:top-auto sm:left-auto sm:bottom-4 sm:right-4 sm:w-[400px] sm:h-[85vh] bg-white rounded-3xl shadow-2xl z-[100] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-b from-[#0c59cc] to-[#1bb38e] pt-6 pb-5 px-6 flex items-center justify-between relative shrink-0 shadow-md z-10">
         
@@ -117,10 +130,15 @@ export default function ChatBot({ isOpen, onClose }) {
           <div key={index} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             
             {msg.role === 'user' ? (
-              <div className="px-6 py-4 rounded-3xl bg-[#0c4ca3] text-white w-[90%] shadow-sm">
-                <div className="text-sm whitespace-pre-wrap">
-                  {msg.content}
+              <div className="flex flex-col items-end gap-1.5 w-[90%]">
+                <div className="px-6 py-4 rounded-3xl bg-[#0c4ca3] text-white w-full shadow-sm">
+                  <div className="text-sm whitespace-pre-wrap">
+                    {msg.content}
+                  </div>
                 </div>
+                <span className="text-[11px] text-gray-400 font-medium tracking-wide mr-2">
+                  {msg.timestamp}
+                </span>
               </div>
             ) : (
               <div className="flex flex-col items-start gap-2 w-[90%]">
@@ -129,8 +147,15 @@ export default function ChatBot({ isOpen, onClose }) {
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 </div>
-                <div className="w-10 h-10 relative rounded-full overflow-hidden shrink-0 shadow-sm border border-gray-200">
-                  <Image src="/illustrations/AI Profile.png" alt="Tamago" fill className="object-cover" />
+                <div className="flex items-center gap-2.5 ml-2">
+                  <div className="w-10 h-10 relative rounded-full overflow-hidden shrink-0 shadow-sm border border-gray-200">
+                    <Image src="/illustrations/AI Profile.png" alt="Tamago" fill className="object-cover" />
+                  </div>
+                  {msg.timestamp && (
+                    <span className="text-[11px] text-gray-400 font-medium tracking-wide mt-1">
+                      {msg.timestamp}
+                    </span>
+                  )}
                 </div>
               </div>
             )}

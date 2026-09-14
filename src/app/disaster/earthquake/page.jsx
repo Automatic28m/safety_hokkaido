@@ -107,7 +107,7 @@ export default function EarthquakePage() {
             </div>
             
             <div className="pt-16">
-              <h2 className="font-bowlby text-4xl font-black text-black mb-4">THUNAMI</h2>
+              <h2 className="font-bowlby text-4xl font-black text-black mb-4">TSUNAMI</h2>
               <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden mb-6 border-2 border-black">
                 <Image 
                   src="/illustrations/Tsunami.png" 
@@ -117,7 +117,7 @@ export default function EarthquakePage() {
                 />
               </div>
 
-              <h3 className="text-2xl font-bold border-b-2 border-black pb-1 inline-block mb-3">
+              <h3 className="text-2xl font-bold border-b-2 border-black pb-1 inline-block mb-3 text-black">
                 What is it?
               </h3>
               <p className="text-gray-800 leading-relaxed mb-6">

@@ -84,7 +84,7 @@ export default function EmergencyContactPage() {
         {/* Help Desk Links */}
         <div className="space-y-4 mb-10">
           
-          <Link href="#" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
+          <Link href="https://www.japan.travel/en/plan/hotline/" target="_blank" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
             <div className="flex-1 pr-4">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-green-500 shrink-0 mt-1.5"></div>
@@ -99,7 +99,7 @@ export default function EmergencyContactPage() {
             </div>
           </Link>
 
-          <Link href="#" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
+          <Link href="https://www.japan.travel/en/news/JapanSafeTravel/" target="_blank" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
             <div className="flex-1 pr-4">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-green-500 shrink-0 mt-1.5"></div>
@@ -114,7 +114,7 @@ export default function EmergencyContactPage() {
             </div>
           </Link>
 
-          <Link href="#" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
+          <Link href="https://crisis.yahoo.co.jp/map/" target="_blank" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
             <div className="flex-1 pr-4">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-green-500 shrink-0 mt-1.5"></div>
@@ -129,7 +129,7 @@ export default function EmergencyContactPage() {
             </div>
           </Link>
 
-          <Link href="#" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
+          <Link href="#" target="_blank" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
             <div className="flex-1 pr-4">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-green-500 shrink-0 mt-1.5"></div>
@@ -144,7 +144,7 @@ export default function EmergencyContactPage() {
             </div>
           </Link>
 
-          <Link href="#" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
+          <Link href="https://wwwtb.mlit.go.jp/hokkaido/unkoujouhou/index.html" target="_blank" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
             <div className="flex-1 pr-4">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-green-500 shrink-0 mt-1.5"></div>
@@ -159,7 +159,7 @@ export default function EmergencyContactPage() {
             </div>
           </Link>
 
-          <Link href="#" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
+          <Link href="https://www.jrhokkaido.co.jp/global/index.html" target="_blank" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
             <div className="flex-1 pr-4">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-green-500 shrink-0 mt-1.5"></div>
@@ -174,7 +174,7 @@ export default function EmergencyContactPage() {
             </div>
           </Link>
 
-          <Link href="#" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
+          <Link href="https://www.jrhokkaidobus.com/en/" target="_blank" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
             <div className="flex-1 pr-4">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-green-500 shrink-0 mt-1.5"></div>

@@ -111,7 +111,51 @@ export default function LearningMaterialsPage() {
             <p>If your room becomes unsafe, move to a designated shelter or a large public facility.</p>
           </div>
         </div>
-        <div id="links" className="scroll-mt-32"></div>
+        {/* Section 3: Help desk & Links */}
+        <div id="links" className="bg-white rounded-3xl shadow-md p-6 mb-10 scroll-mt-32">
+          <div className="flex items-center gap-2 mb-4">
+            <svg className="text-green-500 w-6 h-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
+            </svg>
+            <h2 className="text-2xl font-bold text-black">Help desk & Links</h2>
+          </div>
+          
+          <p className="text-gray-700 leading-relaxed mb-6">
+            Useful resources for tourists during emergencies or for travel planning in Hokkaido.
+          </p>
+
+          <div className="space-y-4">
+            <Link href="https://www.japan.travel/en/plan/hotline/" target="_blank" rel="noopener noreferrer" className="flex flex-col p-4 border-2 border-black rounded-2xl hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-black mb-1">Japan Visitor Hotline</span>
+              <span className="text-sm text-blue-600 break-all underline decoration-blue-300 underline-offset-2">https://www.japan.travel/en/plan/hotline/</span>
+            </Link>
+            
+            <Link href="https://www.japan.travel/en/news/JapanSafeTravel/" target="_blank" rel="noopener noreferrer" className="flex flex-col p-4 border-2 border-black rounded-2xl hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-black mb-1">JNTO – Japan Safe Travel</span>
+              <span className="text-sm text-blue-600 break-all underline decoration-blue-300 underline-offset-2">https://www.japan.travel/en/news/JapanSafeTravel/</span>
+            </Link>
+            
+            <Link href="https://crisis.yahoo.co.jp/map/" target="_blank" rel="noopener noreferrer" className="flex flex-col p-4 border-2 border-black rounded-2xl hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-black mb-1">Evacuation Shelter Map</span>
+              <span className="text-sm text-blue-600 break-all underline decoration-blue-300 underline-offset-2">https://crisis.yahoo.co.jp/map/</span>
+            </Link>
+            
+            <Link href="https://wwwtb.mlit.go.jp/hokkaido/unkoujouhou/index.html" target="_blank" rel="noopener noreferrer" className="flex flex-col p-4 border-2 border-black rounded-2xl hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-black mb-1">Hokkaido District Transport Bureau</span>
+              <span className="text-sm text-blue-600 break-all underline decoration-blue-300 underline-offset-2">https://wwwtb.mlit.go.jp/hokkaido/unkoujouhou/index.html</span>
+            </Link>
+            
+            <Link href="https://www.jrhokkaido.co.jp/global/index.html" target="_blank" rel="noopener noreferrer" className="flex flex-col p-4 border-2 border-black rounded-2xl hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-black mb-1">HOKKAIDO RAILWAY COMPANY</span>
+              <span className="text-sm text-blue-600 break-all underline decoration-blue-300 underline-offset-2">https://www.jrhokkaido.co.jp/global/index.html</span>
+            </Link>
+            
+            <Link href="https://www.jrhokkaidobus.com/en/" target="_blank" rel="noopener noreferrer" className="flex flex-col p-4 border-2 border-black rounded-2xl hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-black mb-1">JR Hokkaido Bus</span>
+              <span className="text-sm text-blue-600 break-all underline decoration-blue-300 underline-offset-2">https://www.jrhokkaidobus.com/en/</span>
+            </Link>
+          </div>
+        </div>
 
       </div>
     </div>

@@ -1,7 +1,34 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export default function Home() {
+async function getWeatherData() {
+  try {
+    const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=43.0621&longitude=141.3544&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo", {
+      next: { revalidate: 1800 } // Revalidate every 30 mins
+    });
+    if (!res.ok) throw new Error('Failed to fetch weather');
+    return res.json();
+  } catch (error) {
+    console.error("Weather fetch error:", error);
+    return null;
+  }
+}
+
+export default async function Home() {
+  const weatherData = await getWeatherData();
+  
+  // Fallbacks in case API fails
+  const currentTemp = weatherData?.current?.temperature_2m ? Math.round(weatherData.current.temperature_2m) : 25;
+  const maxTemp = weatherData?.daily?.temperature_2m_max?.[0] ? Math.round(weatherData.daily.temperature_2m_max[0]) : 27;
+  const minTemp = weatherData?.daily?.temperature_2m_min?.[0] ? Math.round(weatherData.daily.temperature_2m_min[0]) : 15;
+  
+  const code = weatherData?.current?.weather_code || 0;
+  let bgGradient = "from-yellow-400 to-orange-500"; // Sunny
+  if (code >= 51 && code <= 67) bgGradient = "from-blue-400 to-indigo-600"; // Rain
+  else if (code >= 71 && code <= 86) bgGradient = "from-slate-300 to-slate-500"; // Snow
+  else if (code >= 1 && code <= 3) bgGradient = "from-sky-300 to-blue-400"; // Cloudy
+  else if (code >= 95) bgGradient = "from-gray-600 to-gray-900"; // Thunderstorm
+
   return (
     <div className="flex flex-col items-center pb-10 bg-[#f4f7f6]">
       {/* Hero Banner Section */}
@@ -40,14 +67,14 @@ export default function Home() {
           Today's Weather
         </h2>
         
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 text-white flex justify-between items-center relative overflow-hidden">
+        <div className={`bg-gradient-to-r ${bgGradient} rounded-2xl p-6 text-white flex justify-between items-center relative overflow-hidden transition-colors duration-1000`}>
           <div className="relative z-10">
-            <div className="text-6xl font-black mb-1">25°C</div>
-            <div className="text-xs font-bold">MAX. 27°C, MIN.15°C</div>
+            <div className="text-6xl font-black mb-1">{currentTemp}°C</div>
+            <div className="text-xs font-bold tracking-wide">MAX. {maxTemp}°C, MIN.{minTemp}°C</div>
           </div>
           {/* Decorative clouds/sun for weather */}
           <div className="absolute right-[-20px] bottom-[-20px] opacity-80">
-             <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" className="text-gray-200">
+             <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" className="text-white/30">
                <path d="M17.5 19c-2.5 0-4.5-2-4.5-4.5S15 10 17.5 10c.8 0 1.5.2 2.1.5C18.8 6.8 15.7 4 12 4 7.6 4 4 7.6 4 12c0 4.4 3.6 8 8 8h5.5v-1z"/>
              </svg>
           </div>
