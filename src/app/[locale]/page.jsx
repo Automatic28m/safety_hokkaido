@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getTranslations } from 'next-intl/server';
 
 async function getWeatherData() {
   try {
@@ -14,7 +15,9 @@ async function getWeatherData() {
   }
 }
 
-export default async function Home() {
+export default async function Home({ params }) {
+  const { locale } = await params;
+  const t = await getTranslations('Home');
   const weatherData = await getWeatherData();
   
   // Fallbacks in case API fails
@@ -28,6 +31,20 @@ export default async function Home() {
   else if (code >= 71 && code <= 86) bgGradient = "from-slate-300 to-slate-500"; // Snow
   else if (code >= 1 && code <= 3) bgGradient = "from-sky-300 to-blue-400"; // Cloudy
   else if (code >= 95) bgGradient = "from-gray-600 to-gray-900"; // Thunderstorm
+
+  // Fetch earthquake data
+  let earthquake = null;
+  try {
+    const res = await fetch('https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&limit=1&orderby=time&minlatitude=30&maxlatitude=46&minlongitude=128&maxlongitude=146', { next: { revalidate: 60 } });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.features && data.features.length > 0) {
+        earthquake = data.features[0];
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch earthquake data:", err);
+  }
 
   return (
     <div className="flex flex-col items-center pb-10 bg-[#f4f7f6]">
@@ -46,11 +63,11 @@ export default async function Home() {
         
         {/* Text Overlay */}
         <div className="w-full max-w-md relative z-10 text-center px-6">
-          <h1 className="font-bowlby text-5xl font-black text-white tracking-tighter mb-1 drop-shadow-lg">
-            HOKGUIDEDO
+          <h1 className="font-torsilp text-5xl font-black text-white tracking-wider mb-1 drop-shadow-lg">
+            {t('title')}
           </h1>
           <p className="text-white text-sm font-medium drop-shadow-md">
-            Hokkaido Disaster Guide for Tourist
+            {t('subtitle')}
           </p>
         </div>
       </section>
@@ -61,16 +78,16 @@ export default async function Home() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
           </svg>
-          <span className="text-sm font-medium">Japan Hokkaido</span>
+          <span className="text-sm font-medium">{t('location')}</span>
         </div>
         <h2 className="text-2xl font-bold text-green-500 mb-4">
-          Today's Weather
+          {t('weatherTitle')}
         </h2>
         
         <div className={`bg-gradient-to-r ${bgGradient} rounded-2xl p-6 text-white flex justify-between items-center relative overflow-hidden transition-colors duration-1000`}>
           <div className="relative z-10">
             <div className="text-6xl font-black mb-1">{currentTemp}°C</div>
-            <div className="text-xs font-bold tracking-wide">MAX. {maxTemp}°C, MIN.{minTemp}°C</div>
+            <div className="text-xs font-bold tracking-wide">{t('weatherMax')} {maxTemp}°C, {t('weatherMin')}{minTemp}°C</div>
           </div>
           {/* Decorative clouds/sun for weather */}
           <div className="absolute right-[-20px] bottom-[-20px] opacity-80">
@@ -79,11 +96,56 @@ export default async function Home() {
              </svg>
           </div>
         </div>
+
       </section>
+
+      {/* Earthquake Card */}
+      <section className="w-[90%] max-w-md bg-white rounded-3xl p-6 shadow-xl mt-6 relative z-20">
+        <div className="flex items-center gap-2 mb-2 text-gray-600">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span className="text-sm font-medium">{t('location')}</span>
+        </div>
+        <h2 className="text-2xl font-bold text-green-500 mb-4">
+          {t('recentEarthquakeTitle')}
+        </h2>
+        
+        {earthquake ? (
+          <div className="bg-gradient-to-r from-red-500 to-orange-400 rounded-2xl p-6 text-white flex flex-col relative overflow-hidden">
+            <div className="relative z-10">
+              <div className="text-5xl font-black mb-1">M {earthquake.properties.mag.toFixed(1)}</div>
+              <div className="text-sm font-bold tracking-wide mt-2 opacity-90 truncate" title={earthquake.properties.place}>
+                {earthquake.properties.place}
+              </div>
+              <div className="text-xs font-bold tracking-wide mt-1 opacity-75">
+                {new Date(earthquake.properties.time).toLocaleString(locale === 'th' ? 'th-TH' : 'en-US', {
+                  timeZone: 'Asia/Tokyo',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+            </div>
+            {/* Decorative waves for earthquake */}
+            <div className="absolute right-[-10px] bottom-[-20px] opacity-20">
+              <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 12h4l2-9 5 18 3-9h6"/>
+              </svg>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-200 rounded-2xl p-6 text-gray-500 text-center">
+            {t('noEarthquakeData')}
+          </div>
+        )}
+      </section>
+
 
       {/* Scroll indicator */}
       <div className="flex flex-col items-center text-blue-600 mt-8 mb-10 animate-bounce">
-        <span className="text-sm font-medium mb-1">scroll!</span>
+        <span className="text-sm font-medium mb-1">{t('scroll')}</span>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
@@ -93,20 +155,18 @@ export default async function Home() {
       <section className="w-[90%] max-w-md px-4 mb-12 text-gray-800">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <h2 className="text-xl font-bold text-green-500">About</h2>
+          <h2 className="text-xl font-bold text-green-500">{t('aboutTitle')}</h2>
         </div>
         <p className="text-lg leading-relaxed">
-          In addition to real-time updates on weather and disaster alerts—which are useful for your trip to Hokkaido—we also provide easy-to-understand travel guides.
+          {t('aboutText')}
         </p>
       </section>
 
       {/* What Do You Need Section */}
       <section className="w-[90%] max-w-md bg-green-500 rounded-3xl p-6 pb-8 mb-12 shadow-lg">
-        <h2 className="font-bowlby text-4xl font-black text-white leading-tight mb-2 uppercase tracking-tight">
-          What Do<br/>You Need?
-        </h2>
+        <h2 className="font-torsilp text-4xl font-black text-white leading-tight mb-2 uppercase tracking-wider" dangerouslySetInnerHTML={{ __html: t.raw('whatDoYouNeed') }} />
         <div className="w-16 h-[2px] bg-white mb-4"></div>
-        <p className="text-white font-medium mb-6">Please select what you'd like to know.</p>
+        <p className="text-white font-medium mb-6">{t('pleaseSelect')}</p>
 
         <div className="space-y-6">
           {/* Disaster */}
@@ -114,22 +174,22 @@ export default async function Home() {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-orange-400"></div>
-                <h3 className="text-2xl font-bold text-black">Disaster</h3>
+                <h3 className="text-2xl font-bold text-black">{t('disaster')}</h3>
               </div>
               <div className="w-8 h-8 rounded-full bg-orange-400 flex justify-center items-center text-white">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Link href="/disaster/blizzard" className="block relative aspect-square rounded-xl overflow-hidden shadow-inner group">
+              <Link href={`/${locale}/disaster/blizzard`} className="block relative aspect-square rounded-xl overflow-hidden shadow-inner group">
                 <Image src="/illustrations/Blizzard.png" alt="Blizzard" fill className="object-cover group-hover:scale-105 transition-transform" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                <div className="absolute bottom-2 left-0 right-0 text-center text-white font-bold text-lg">Blizzard</div>
+                <div className="absolute bottom-2 left-0 right-0 text-center text-white font-bold text-lg">{t('blizzard')}</div>
               </Link>
-              <Link href="/disaster/earthquake" className="block relative aspect-square rounded-xl overflow-hidden shadow-inner group">
+              <Link href={`/${locale}/disaster/earthquake`} className="block relative aspect-square rounded-xl overflow-hidden shadow-inner group">
                 <Image src="/illustrations/Earthquake .png" alt="Earthquake" fill className="object-cover group-hover:scale-105 transition-transform" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                <div className="absolute bottom-2 left-0 right-0 text-center text-white font-bold text-lg">Earthquake</div>
+                <div className="absolute bottom-2 left-0 right-0 text-center text-white font-bold text-lg">{t('earthquake')}</div>
               </Link>
             </div>
           </div>
@@ -139,9 +199,9 @@ export default async function Home() {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-orange-400"></div>
-                <h3 className="text-2xl font-bold text-black">Transportation</h3>
+                <h3 className="text-2xl font-bold text-black">{t('transportation')}</h3>
               </div>
-              <Link href="/transportation/train" className="w-8 h-8 rounded-full bg-orange-400 flex justify-center items-center text-white">
+              <Link href={`/${locale}/transportation/train`} className="w-8 h-8 rounded-full bg-orange-400 flex justify-center items-center text-white">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </Link>
             </div>
@@ -155,9 +215,9 @@ export default async function Home() {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-orange-400"></div>
-                <h3 className="text-2xl font-bold text-black leading-tight">Learning<br/>Materials</h3>
+                <h3 className="text-2xl font-bold text-black leading-tight" dangerouslySetInnerHTML={{ __html: t.raw('learningMaterialsTitle') }} />
               </div>
-              <Link href="/learning-materials" className="w-8 h-8 rounded-full bg-orange-400 flex justify-center items-center text-white">
+              <Link href={`/${locale}/learning-materials`} className="w-8 h-8 rounded-full bg-orange-400 flex justify-center items-center text-white">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </Link>
             </div>
@@ -170,12 +230,8 @@ export default async function Home() {
 
       {/* Hokkaido Information Section */}
       <section className="w-[90%] max-w-md px-4 mb-8">
-        <h2 className="font-bowlby text-4xl font-black text-green-500 leading-none mb-4 uppercase tracking-tighter">
-          HOKKAIDO<br/>INFORMATION
-        </h2>
-        <p className="text-gray-700 leading-relaxed text-lg">
-          <strong className="text-black font-bold">Hokkaido</strong> is the northernmost island of Japan. It is famous for beautiful nature and cold, snowy winters. The largest city is Sapporo, known for its snow festival. Hokkaido also has delicious food, such as fresh seafood and dairy products.
-        </p>
+        <h2 className="font-torsilp text-4xl font-black text-green-500 leading-none mb-4 uppercase tracking-wider" dangerouslySetInnerHTML={{ __html: t.raw('infoTitle') }} />
+        <p className="text-gray-700 leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: t.raw('infoText') }} />
       </section>
 
     </div>

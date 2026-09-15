@@ -7,7 +7,7 @@ export default function BlizzardPage() {
       <div className="w-[90%] max-w-md">
         
         {/* Header */}
-        <h1 className="font-bowlby text-5xl font-black text-black tracking-tighter mb-2">
+        <h1 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2">
           DISASTER
         </h1>
         <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
@@ -24,7 +24,7 @@ export default function BlizzardPage() {
 
         {/* Content Box */}
         <div className="bg-white rounded-b-3xl rounded-tr-3xl shadow-md p-6 -mt-8 pt-8 mb-12">
-          <h2 className="font-bowlby text-4xl font-black text-black mb-4">BLIZZARD</h2>
+          <h2 className="font-torsilp text-4xl font-black text-black mb-4">BLIZZARD</h2>
           
           <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden mb-6 border-2 border-black">
             <Image 
@@ -94,7 +94,7 @@ export default function BlizzardPage() {
         </div>
 
         {/* Links Section */}
-        <h2 className="font-bowlby text-5xl font-black text-black tracking-tighter mb-2">LINKS</h2>
+        <h2 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2">LINKS</h2>
         <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
 
         <div className="space-y-4">
