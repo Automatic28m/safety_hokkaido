@@ -23,7 +23,7 @@ export default function BlizzardPage() {
         </div>
 
         {/* Content Box */}
-        <div className="bg-white rounded-b-3xl rounded-tr-3xl shadow-md p-6 -mt-8 pt-8 mb-12">
+        <div className="bg-white rounded-b-3xl shadow-md p-6 -mt-8 pt-8 mb-12">
           <h2 className="font-torsilp text-4xl font-black text-black mb-4">BLIZZARD</h2>
           
           <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden mb-6 border-2 border-black">

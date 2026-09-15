@@ -9,7 +9,7 @@ export default async function BusPage({ params }) {
 
   return (
     <div className="flex flex-col items-center pb-10 bg-[#f4f7f6] pt-24">
-      <div className="w-[90%] max-w-md">
+      <div className="w-[90%] max-w-md md:max-w-5xl lg:max-w-6xl">
         
         {/* Header */}
         <h1 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2 leading-none uppercase" dangerouslySetInnerHTML={{ __html: tTrans.raw('title') }} />

@@ -1,4 +1,9 @@
-'use client';
+import re
+
+with open('src/components/Footer.jsx', 'r') as f:
+    content = f.read()
+
+new_footer = """'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -139,3 +144,7 @@ export default function Footer() {
     </div>
   );
 }
+"""
+
+with open('src/components/Footer.jsx', 'w') as out_f:
+    out_f.write(new_footer)

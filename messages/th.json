@@ -15,7 +15,7 @@
     "emergencyContact": "ติดต่อฉุกเฉิน"
   },
   "Home": {
-    "title": "HOKGUIDEDO",
+    "title": "SAFETYHOKAIDO",
     "subtitle": "คู่มือรับมือภัยพิบัติสำหรับนักท่องเที่ยวในฮอกไกโด",
     "location": "ฮอกไกโด ประเทศญี่ปุ่น",
     "weatherTitle": "สภาพอากาศวันนี้",
@@ -196,7 +196,7 @@
     "blzNowCar3": "โทรขอความช่วยเหลือ: 110 หรือบริษัทรถเช่าของคุณ เปิดไฟฉุกเฉิน"
   },
   "Earthquake": {
-    "title": "สึนามิ",
+    "title": "แผ่นดินไหว",
     "whatIsItDesc": "ญี่ปุ่นเป็นหนึ่งในประเทศที่เกิด<strong className=\"text-blue-700 font-bold\">แผ่นดินไหวบ่อยที่สุด</strong>ในโลก ดังนั้นการสั่นสะเทือนสามารถเกิดขึ้น<strong className=\"text-blue-700 font-bold\">ได้ตลอดเวลา</strong> มันสามารถทำให้คุณ<strong className=\"text-blue-700 font-bold\">ยืนหรือเคลื่อนไหวอย่างปลอดภัยได้ยาก</strong>",
     "shakingLevels": "ระดับการสั่นสะเทือน",
     "level1Title": "ชินโด 1-2",

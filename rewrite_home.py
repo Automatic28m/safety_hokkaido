@@ -1,57 +1,16 @@
-import Image from "next/image";
-import Link from "next/link";
-import { getTranslations } from 'next-intl/server';
+import re
 
-async function getWeatherData() {
-  try {
-    const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=43.0621&longitude=141.3544&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo", {
-      next: { revalidate: 1800 } // Revalidate every 30 mins
-    });
-    if (!res.ok) throw new Error('Failed to fetch weather');
-    return res.json();
-  } catch (error) {
-    console.error("Weather fetch error:", error);
-    return null;
-  }
-}
+with open('src/app/[locale]/page.jsx', 'r') as f:
+    content = f.read()
 
-export default async function Home({ params }) {
-  const { locale } = await params;
-  const t = await getTranslations('Home');
-  const weatherData = await getWeatherData();
-  
-  // Fallbacks in case API fails
-  const currentTemp = weatherData?.current?.temperature_2m ? Math.round(weatherData.current.temperature_2m) : 25;
-  const maxTemp = weatherData?.daily?.temperature_2m_max?.[0] ? Math.round(weatherData.daily.temperature_2m_max[0]) : 27;
-  const minTemp = weatherData?.daily?.temperature_2m_min?.[0] ? Math.round(weatherData.daily.temperature_2m_min[0]) : 15;
-  
-  const code = weatherData?.current?.weather_code || 0;
-  let bgGradient = "from-yellow-400 to-orange-500"; // Sunny
-  if (code >= 51 && code <= 67) bgGradient = "from-blue-400 to-indigo-600"; // Rain
-  else if (code >= 71 && code <= 86) bgGradient = "from-slate-300 to-slate-500"; // Snow
-  else if (code >= 1 && code <= 3) bgGradient = "from-sky-300 to-blue-400"; // Cloudy
-  else if (code >= 95) bgGradient = "from-gray-600 to-gray-900"; // Thunderstorm
-
-  // Fetch earthquake data
-  let earthquake = null;
-  try {
-    const res = await fetch('https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&limit=1&orderby=time&minlatitude=30&maxlatitude=46&minlongitude=128&maxlongitude=146', { next: { revalidate: 60 } });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.features && data.features.length > 0) {
-        earthquake = data.features[0];
-      }
-    }
-  } catch (err) {
-    console.error("Failed to fetch earthquake data:", err);
-  }
-
-  return (
+# I will replace the return statement block.
+start_idx = content.find('  return (')
+if start_idx != -1:
+    new_return = """  return (
     <div className="flex flex-col items-center pb-10 bg-[#f4f7f6]">
       {/* Hero Banner Section */}
-      <section className="w-full h-[85vh] md:h-[70vh] min-h-[500px] relative flex flex-col items-center justify-start overflow-hidden pt-36 pb-32">
+      <section className="w-full h-[85vh] md:h-[70vh] min-h-[500px] relative flex flex-col items-center justify-start overflow-hidden pt-28 pb-32">
         {/* Banner Illustration Background */}
-
         <div className="absolute inset-0 w-full h-full">
           <Image 
             src="/illustrations/Banner.png" 
@@ -68,24 +27,10 @@ export default async function Home({ params }) {
             priority
           />
         </div>
-        
-        {/* Banner Text Overlay (Mobile + Desktop) */}
-        <div className="flex absolute left-0 w-full h-full z-10 pointer-events-none">
-          <div className="w-full max-w-md md:max-w-5xl lg:max-w-6xl mx-auto px-6 md:px-0 pt-24 md:pt-28">
-            <h1 className="font-torsilp text-white font-black leading-none drop-shadow-[0_4px_4px_rgba(0,0,0,0.3)] flex flex-col uppercase tracking-wider text-[3.5rem] md:text-[clamp(4rem,8vw,7rem)]">
-              <span>Safety</span>
-              <span>Hokkaido</span>
-            </h1>
-            <p className="text-white text-lg md:text-xl lg:text-2xl mt-2 md:mt-4 font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)] max-w-[200px] md:max-w-md leading-tight">
-              Hokkaido Disaster Guide for Tourist
-            </p>
-          </div>
-        </div>
-
       </section>
 
       {/* Main Content Container */}
-      <div className="w-full max-w-md md:max-w-5xl lg:max-w-6xl mx-auto relative z-20 -mt-24 md:-mt-20 px-4 md:px-0">
+      <div className="w-full max-w-md md:max-w-5xl lg:max-w-6xl mx-auto relative z-20 -mt-24 md:-mt-32 px-4 md:px-0">
         
         {/* Weather & Earthquake Grid */}
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-8 md:mb-16 md:w-3/4 lg:w-2/3">
@@ -99,14 +44,14 @@ export default async function Home({ params }) {
               <span className="text-sm font-medium">{t('location')}</span>
             </div>
             <h2 className="text-2xl font-bold text-green-500 mb-4">
-              {t('weatherTitle')}
+              {t('todayWeatherTitle')}
             </h2>
             
             <div className={`bg-gradient-to-r ${bgGradient} rounded-2xl p-6 text-white flex flex-col relative overflow-hidden`}>
               <div className="relative z-10">
                 <div className="text-6xl font-black mb-1">{currentTemp}°C</div>
                 <div className="text-sm font-bold tracking-wide mt-2 opacity-90">
-                  {t('weatherMax')} {maxTemp}°C, {t('weatherMin')} {minTemp}°C
+                  {t('maxTemp')} {maxTemp}°C, {t('minTemp')} {minTemp}°C
                 </div>
               </div>
               <div className="absolute right-2 top-2 opacity-30">
@@ -136,7 +81,7 @@ export default async function Home({ params }) {
             </h2>
             
             {earthquake ? (
-              <div className="bg-gradient-to-r from-red-500 to-orange-400 rounded-2xl p-6 text-white flex flex-col relative overflow-hidden">
+              <div className="bg-gradient-to-r from-red-500 to-orange-400 rounded-2xl p-6 text-white flex flex-col relative overflow-hidden h-full">
                 <div className="relative z-10">
                   <div className="text-5xl font-black mb-1">M {earthquake.properties.mag.toFixed(1)}</div>
                   <div className="text-sm font-bold tracking-wide mt-2 opacity-90 truncate" title={earthquake.properties.place}>
@@ -260,13 +205,10 @@ export default async function Home({ params }) {
           </div>
           
           {/* Decorative Hokkaido Map Silhouette */}
-          <div className="hidden md:block md:w-1/2 relative min-h-[350px]">
-            <Image 
-              src="/illustrations/hokkaido.png" 
-              alt="Hokkaido Map Silhouette" 
-              fill 
-              className="object-contain opacity-90 drop-shadow-md p-4"
-            />
+          <div className="hidden md:block md:w-1/2 relative min-h-[400px]">
+            <svg viewBox="0 0 500 500" className="w-full h-full text-white drop-shadow-md absolute inset-0 opacity-80" fill="currentColor">
+              <path d="M 284.45312 95.839844 L 285.45312 119.83984 L 297.45312 129.83984 L 294.45312 144.83984 L 320.45312 178.83984 L 341.45312 184.83984 L 358.45312 165.83984 L 387.45312 161.83984 L 401.45312 188.83984 L 401.45312 211.83984 L 387.45312 218.83984 L 372.45312 245.83984 L 392.45312 258.83984 L 382.45312 291.83984 L 410.45312 300.83984 L 468.45312 300.83984 L 480.45312 316.83984 L 462.45312 344.83984 L 439.45312 360.83984 L 409.45312 367.83984 L 400.45312 391.83984 L 397.45312 405.83984 L 379.45312 396.83984 L 370.45312 370.83984 L 333.45312 357.83984 L 305.45312 343.83984 L 298.45312 366.83984 L 273.45312 384.83984 L 261.45312 365.83984 L 243.45312 376.83984 L 235.45312 429.83984 L 210.45312 447.83984 L 217.45312 411.83984 L 202.45312 402.83984 L 221.45312 375.83984 L 180.45312 373.83984 L 166.45312 360.83984 L 129.45312 359.83984 L 118.45312 368.83984 L 124.45312 380.83984 L 105.45312 376.83984 L 111.45312 350.83984 L 97.45312 344.83984 L 94.45312 331.83984 L 128.45312 320.83984 L 132.45312 301.83984 L 122.45312 284.83984 L 90.453125 301.83984 L 83.453125 289.83984 L 56.453125 273.83984 L 23.453125 277.83984 L 32.453125 258.83984 L 51.453125 240.83984 L 46.453125 210.83984 L 79.453125 220.83984 L 106.45312 186.83984 L 134.45312 187.83984 L 160.45312 201.83984 L 175.45312 201.83984 L 181.45312 216.83984 L 224.45312 216.83984 L 238.45312 173.83984 L 244.45312 129.83984 L 261.45312 108.83984 L 284.45312 95.839844 Z" />
+            </svg>
           </div>
         </section>
 
@@ -274,3 +216,10 @@ export default async function Home({ params }) {
     </div>
   );
 }
+"""
+
+    new_content = content[:start_idx] + new_return
+    with open('src/app/[locale]/page.jsx', 'w') as out_f:
+        out_f.write(new_content)
+else:
+    print("Could not find start index")

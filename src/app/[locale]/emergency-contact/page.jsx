@@ -7,14 +7,14 @@ export default async function EmergencyContactPage({ params }) {
 
   return (
     <div className="flex flex-col items-center pb-10 bg-[#f4f7f6] pt-24">
-      <div className="w-[90%] max-w-md">
+      <div className="w-[90%] max-w-md md:max-w-5xl lg:max-w-6xl">
         
         {/* Header */}
-        <h1 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2 leading-none uppercase" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
-        <div className="border-b-2 border-dashed border-gray-400 mb-8"></div>
+        <h1 className="font-torsilp text-5xl md:text-7xl font-black text-black tracking-wider mb-2 leading-none uppercase" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
+        <div className="border-b-2 border-dashed border-gray-400 mb-8 md:mb-12"></div>
 
         {/* Emergency Numbers */}
-        <div className="space-y-4 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
           
           {/* Fire / ambulance */}
           <div className="bg-white rounded-3xl shadow-sm p-6">
@@ -78,11 +78,11 @@ export default async function EmergencyContactPage({ params }) {
         </div>
 
         {/* Links Header */}
-        <h1 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2 leading-none uppercase mt-12" dangerouslySetInnerHTML={{ __html: t.raw('helpDeskLinks') }} />
-        <div className="border-b-2 border-dashed border-gray-400 mb-8"></div>
+        <h1 className="font-torsilp text-5xl md:text-7xl font-black text-black tracking-wider mb-2 leading-none uppercase mt-12 md:mt-16" dangerouslySetInnerHTML={{ __html: t.raw('helpDeskLinks') }} />
+        <div className="border-b-2 border-dashed border-gray-400 mb-8 md:mb-12"></div>
 
         {/* Help Desk Links */}
-        <div className="space-y-4 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10">
           
           <Link href="https://www.japan.travel/en/plan/hotline/" target="_blank" className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
             <div className="flex-1 pr-4">

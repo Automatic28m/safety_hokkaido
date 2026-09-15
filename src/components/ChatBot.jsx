@@ -113,7 +113,7 @@ export default function ChatBot({ isOpen, onClose }) {
           
           <div className="flex flex-col">
             <h2 className="text-white font-bold text-2xl tracking-wide leading-tight">Tamago</h2>
-            <p className="text-white text-sm opacity-90 mt-0.5">Ready for answer</p>
+            <p className="text-white text-sm opacity-90 mt-0.5">Ready for answer <br/><span className="text-xs opacity-75">Using AI model: gpt-oss-120b</span></p>
           </div>
         </div>
 
@@ -164,7 +164,7 @@ export default function ChatBot({ isOpen, onClose }) {
         ))}
         
         {isLoading && (
-          <div className="flex w-full justify-start">
+          <div className="flex w-fit justify-start">
             <div className="flex flex-col items-start gap-2 w-[90%]">
               <div className="px-6 py-4 rounded-3xl bg-gray-100 shadow-sm w-full">
                 <div className="flex gap-1.5 items-center h-full pt-1 pb-0.5">

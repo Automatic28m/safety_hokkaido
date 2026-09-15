@@ -29,7 +29,7 @@ const torsilp = localFont({
 });
 
 export const metadata = {
-  title: "HOKGUIDEDO",
+  title: "SafetyHokaido",
   description: "Hokkaido Disaster Guide for Tourist",
 };
 
@@ -47,7 +47,7 @@ export default async function RootLayout({ children, params }) {
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} ${anuphan.variable} ${torsilp.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-gray-50">
+      <body className="min-h-full flex flex-col bg-[#f4f7f6]">
         <NextIntlClientProvider messages={messages}>
           <Navbar />
           <main className="flex-1">

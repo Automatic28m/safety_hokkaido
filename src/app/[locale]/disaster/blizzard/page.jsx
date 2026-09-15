@@ -8,11 +8,11 @@ export default async function BlizzardPage({ params }) {
   const t = await getTranslations('Blizzard');
 
   return (
-    <div className="flex flex-col items-center pb-10 bg-[#f4f7f6] pt-24">
-      <div className="w-[90%] max-w-md">
+    <div className="flex flex-col items-center pb-10 bg-[#f4f7f6] pt-45">
+      <div className="w-[90%] max-w-md md:max-w-5xl lg:max-w-6xl">
         
         {/* Header */}
-        <h1 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2">
+        <h1 className="font-torsilp text-5xl md:text-8xl font-black text-black tracking-wider mb-2 md:mb-6 uppercase">
           {t('title')}
         </h1>
         <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
@@ -28,10 +28,12 @@ export default async function BlizzardPage({ params }) {
         </div>
 
         {/* Content Box */}
-        <div className="bg-white rounded-b-3xl rounded-tl-3xl shadow-md p-6 -mt-8 pt-8 mb-12 relative">
-          <h2 className="font-torsilp text-4xl font-black text-black mb-4">{t('blizzardHeading')}</h2>
+        <div className="bg-white rounded-b-3xl rounded-tr-3xl shadow-md p-6 md:p-10 -mt-8 pt-8 md:pt-12 mb-12 relative">
           
-          <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden mb-6 border-2 border-black">
+          {/* Title and Banner - Full width on both mobile and desktop */}
+          <h2 className="font-torsilp text-4xl md:text-6xl font-black text-black mb-4">{t('blizzardHeading')}</h2>
+          
+          <div className="relative w-full aspect-[2/1] md:aspect-[3/1] rounded-xl overflow-hidden mb-8 md:mb-10 border-2 border-black">
             <Image 
               src="/illustrations/Blizzard.png" 
               alt="Blizzard Illustration" 
@@ -40,39 +42,43 @@ export default async function BlizzardPage({ params }) {
             />
           </div>
 
-          <h3 className="text-black text-2xl font-bold border-b-2 border-black pb-1 inline-block mb-3">
-            {t('whatIsIt')}
-          </h3>
-          <p className="text-gray-800 leading-relaxed mb-6" dangerouslySetInnerHTML={{ __html: t.raw('whatIsItDesc') }} />
+          <div className="md:grid md:grid-cols-2 md:gap-12">
+            <div>
+              <h3 className="text-black text-2xl font-bold border-b-2 border-black pb-1 inline-block mb-3">
+                {t('whatIsIt')}
+              </h3>
+              <p className="text-gray-800 leading-relaxed mb-6" dangerouslySetInnerHTML={{ __html: t.raw('whatIsItDesc') }} />
 
-          <div className="space-y-4 mb-8">
-            <Accordion title={t('whatIfItHappens')}>
-              <h4 className="font-bold text-lg mb-2">{t('blzNowOutside')}</h4>
-              <ul className="list-disc pl-5 space-y-2 mb-4 text-sm opacity-90">
-                <li>{t('blzNowOutside1')}</li>
-                <li>{t('blzNowOutside2')}</li>
-              </ul>
-              <h4 className="font-bold text-lg mb-2">{t('blzNowCar')}</h4>
-              <ul className="list-disc pl-5 space-y-2 text-sm opacity-90">
-                <li>{t('blzNowCar1')}</li>
-                <li>{t('blzNowCar2')}</li>
-                <li>{t('blzNowCar3')}</li>
-              </ul>
-            </Accordion>
-            
-            <Accordion title={t('whatCanHappen')}>
-              <p className="font-bold text-base mb-2">{t('blzCanHappenIntro')}</p>
-              <ul className="list-none space-y-1 text-sm opacity-90">
-                <li>{t('blzCanHappen1')}</li>
-                <li>{t('blzCanHappen2')}</li>
-                <li>{t('blzCanHappen3')}</li>
-              </ul>
-            </Accordion>
-          </div>
+              <div className="space-y-4 mb-8">
+                <Accordion title={t('whatIfItHappens')}>
+                  <h4 className="font-bold text-lg mb-2">{t('blzNowOutside')}</h4>
+                  <ul className="list-disc pl-5 space-y-2 mb-4 text-sm opacity-90">
+                    <li>{t('blzNowOutside1')}</li>
+                    <li>{t('blzNowOutside2')}</li>
+                  </ul>
+                  <h4 className="font-bold text-lg mb-2">{t('blzNowCar')}</h4>
+                  <ul className="list-disc pl-5 space-y-2 text-sm opacity-90">
+                    <li>{t('blzNowCar1')}</li>
+                    <li>{t('blzNowCar2')}</li>
+                    <li>{t('blzNowCar3')}</li>
+                  </ul>
+                </Accordion>
+                
+                <Accordion title={t('whatCanHappen')}>
+                  <p className="font-bold text-base mb-2">{t('blzCanHappenIntro')}</p>
+                  <ul className="list-none space-y-1 text-sm opacity-90">
+                    <li>{t('blzCanHappen1')}</li>
+                    <li>{t('blzCanHappen2')}</li>
+                    <li>{t('blzCanHappen3')}</li>
+                  </ul>
+                </Accordion>
+              </div>
+            </div>
 
-          <h3 className="text-2xl font-bold border-b-2 border-black pb-1 inline-block mb-6 text-black">
-            {t('whatIsYourSituation')}
-          </h3>
+            <div>
+              <h3 className="text-2xl font-bold border-b-2 border-black pb-1 inline-block mb-6 text-black">
+                {t('whatIsYourSituation')}
+              </h3>
 
           <div className="space-y-6">
             <div>
@@ -105,11 +111,14 @@ export default async function BlizzardPage({ params }) {
           </div>
         </div>
 
-        {/* Links Section */}
-        <h2 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2">{t('linksTitle')}</h2>
-        <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
+            </div>
+          </div>
 
-        <div className="space-y-4">
+        {/* Links Section */}
+        <h2 className="font-torsilp text-5xl md:text-7xl font-black text-black tracking-wider mb-2">{t('linksTitle')}</h2>
+        <div className="border-b-2 border-dashed border-gray-400 mb-6 md:mb-10"></div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-10">
           <Link href={`/${locale}/learning-materials`} className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
             <div>
               <div className="flex items-center gap-2 mb-2">
