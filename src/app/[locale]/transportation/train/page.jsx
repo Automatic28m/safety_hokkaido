@@ -8,7 +8,7 @@ export default async function TrainPage({ params }) {
   const t = await getTranslations('Train');
 
   return (
-    <div className="flex flex-col items-center pb-10 bg-[#f4f7f6] pt-24">
+    <div className="flex flex-col items-center pb-10 bg-[#f4f7f6] pt-24 ">
       <div className="w-[90%] max-w-md md:max-w-5xl lg:max-w-6xl">
 
         {/* Header */}

@@ -57,14 +57,14 @@ export default async function Home({ params }) {
             src="/illustrations/Banner.png" 
             alt="SafetyHokaido Mascot Waving" 
             fill 
-            className="object-cover object-top md:hidden"
+            className="object-cover object-top md:hidden brightness-[0.80]"
             priority
           />
           <Image 
             src="/illustrations/Banner_landscape.jpeg" 
             alt="SafetyHokaido Mascot Waving Desktop" 
             fill 
-            className="object-cover object-center hidden md:block"
+            className="object-cover object-center hidden md:block brightness-[0.80]"
             priority
           />
         </div>
@@ -77,7 +77,7 @@ export default async function Home({ params }) {
               <span>Hokkaido</span>
             </h1>
             <p className="text-white text-lg md:text-xl lg:text-2xl mt-2 md:mt-4 font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)] max-w-[200px] md:max-w-md leading-tight">
-              Hokkaido Disaster Guide for Tourist
+              {t('subtitle')}
             </p>
           </div>
         </div>

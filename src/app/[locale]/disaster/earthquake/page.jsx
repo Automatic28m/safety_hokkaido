@@ -32,7 +32,7 @@ export default async function EarthquakePage({ params }) {
         <div className="bg-white rounded-tr-3xl rounded-b-none md:rounded-tr-[32px] shadow-md p-6 md:p-10 -mt-8 pt-8 md:pt-12 relative">
           
           {/* Earthquake Title and Banner */}
-          <h2 className="font-torsilp text-4xl md:text-6xl font-black text-black mb-4">{t('title')}</h2>
+          <h2 className="font-torsilp text-4xl md:text-6xl font-black text-black mb-4">{t('earthquakeHeading')}</h2>
           
           <div className="relative w-full aspect-[2/1] md:aspect-[3/1] rounded-xl overflow-hidden mb-8 md:mb-10 border-2 border-black">
             <Image
@@ -132,9 +132,9 @@ export default async function EarthquakePage({ params }) {
         <div className="md:mt-12 bg-white md:bg-transparent rounded-b-3xl md:rounded-none shadow-md md:shadow-none p-6 md:p-0 pt-0 md:pt-0 relative z-0 md:z-auto md:mb-12">
           
           {/* Desktop Tsunami separator */}
-          <div className="hidden md:block relative mt-8 mb-16">
-            <div className="absolute left-16 top-[-40px] border-l-2 border-dashed border-gray-400 h-16"></div>
-            <div className="absolute left-20 top-[-40px] bg-[#0047b3] text-white text-sm font-bold py-2 px-4 rounded-r-xl rounded-bl-xl shadow-md w-64">
+          <div className="hidden md:block relative h-24 w-full">
+            <div className="absolute left-4 top-[-20px] border-l-2 border-dashed border-gray-400 h-16 z-0"></div>
+            <div className="absolute left-8 top-[-10px] bg-[#0047b3] text-white text-sm font-bold py-2 px-4 rounded-r-xl rounded-bl-xl shadow-md w-[280px] z-10">
               <span dangerouslySetInnerHTML={{ __html: t.raw('tsunamiBanner') }} />
               <div className="absolute w-3 h-3 bg-[#0047b3] rotate-45 -left-1.5 top-3"></div>
             </div>

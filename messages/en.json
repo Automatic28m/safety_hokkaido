@@ -196,7 +196,8 @@
     "blzNowCar3": "Call for help: 110, or your rental company. Turn on hazard lights."
   },
   "Earthquake": {
-    "title": "EARTHQUAKE",
+    "title": "DISASTER",
+    "earthquakeHeading": "EARTHQUAKE",
     "whatIsItDesc": "Japan is one of the most <strong className=\"text-blue-700 font-bold\">earthquake-prone</strong> countries in the world, so shaking can happen <strong className=\"text-blue-700 font-bold\">at any time</strong>. It can make it hard to <strong className=\"text-blue-700 font-bold\">stand or move safely</strong>.",
     "shakingLevels": "SHAKING LEVELS",
     "level1Title": "Shindo 1-2",

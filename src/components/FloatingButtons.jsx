@@ -24,9 +24,9 @@ export default function FloatingButtons() {
               strokeLinejoin="round"
               paintOrder="stroke fill"
             >
-              <textPath href="#emergency-curve" startOffset="50%" textAnchor="middle">
+              {/* <textPath href="#emergency-curve" startOffset="50%" textAnchor="middle">
                 emergency contact
-              </textPath>
+              </textPath> */}
             </text>
           </svg>
 
@@ -56,9 +56,9 @@ export default function FloatingButtons() {
               strokeLinejoin="round"
               paintOrder="stroke fill"
             >
-              <textPath href="#ai-curve" startOffset="50%" textAnchor="middle">
+              {/* <textPath href="#ai-curve" startOffset="50%" textAnchor="middle">
                 ai chat
-              </textPath>
+              </textPath> */}
             </text>
           </svg>
 

@@ -186,9 +186,9 @@ export default function ChatBot({ isOpen, onClose }) {
       {/* Input Area */}
       <div className="p-4 bg-gray-50 shrink-0 pb-8 sm:pb-4">
         <form onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-full flex items-center px-3 py-2 gap-3 shadow-sm">
-          <button type="button" className="text-black p-2" aria-label="Add attachment">
+          {/* <button type="button" className="text-black p-2" aria-label="Add attachment">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
+          </button> */}
           
           <input 
             type="text" 
@@ -199,9 +199,9 @@ export default function ChatBot({ isOpen, onClose }) {
             className="flex-1 bg-transparent outline-none min-w-0 text-lg placeholder:text-gray-300 text-gray-700" 
           />
           
-          <button type="button" className="text-black p-2" aria-label="Voice input">
+          {/* <button type="button" className="text-black p-2" aria-label="Voice input">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-          </button>
+          </button> */}
           
           <button 
             type="submit" 
