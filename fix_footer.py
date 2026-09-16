@@ -3,148 +3,96 @@ import re
 with open('src/components/Footer.jsx', 'r') as f:
     content = f.read()
 
-new_footer = """'use client';
-
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-
-export default function Footer() {
-  const pathname = usePathname();
-  // Simple check for locale prefix to retain it in links
-  const locale = pathname.split('/')[1] || 'en';
-  
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  return (
-    <div className="w-full pb-8 md:pb-12 bg-transparent flex justify-center mt-12 md:mt-24">
-      <footer className="w-[92%] max-w-md md:max-w-6xl mx-auto bg-gradient-to-b from-[#0047b3] to-[#0c8a9e] text-white rounded-[24px] md:rounded-[32px] p-8 md:p-12 md:py-16 shadow-lg relative">
-        
-        {/* Mobile Layout */}
-        <div className="md:hidden">
-          <div className="flex justify-between items-start mb-8">
-            <Link href={`/${locale}`}>
-              <Image src="/illustrations/logo_team.png" alt="SafetyHokaido" width={100} height={50} className="w-[100px] h-auto" />
-            </Link>
-            <button 
-              onClick={scrollToTop}
-              aria-label="Back to top"
-              className="w-10 h-10 bg-orange-400 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 shrink-0"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m18 15-6-6-6 6"/>
-              </svg>
-            </button>
-          </div>
-
-          <nav className="space-y-6">
-            <div>
-              <Link href={`/${locale}`} className="font-bold text-lg">Top</Link>
-            </div>
-            
-            <div>
-              <h3 className="font-bold text-lg mb-2">Disaster</h3>
-              <ul className="pl-6 space-y-2 opacity-90 text-[15px]">
-                <li><Link href={`/${locale}/disaster/blizzard`}>Blizzard</Link></li>
-                <li><Link href={`/${locale}/disaster/earthquake`}>Earthquake</Link></li>
+# Replace Mobile layout topics with details/summary accordions
+mobile_disaster = """            <details className="group cursor-pointer">
+              <summary className="font-bold text-lg mb-2 list-none hover:text-orange-300 transition-colors flex justify-between items-center [&::-webkit-details-marker]:hidden">
+                Disaster
+                <svg className="w-5 h-5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </summary>
+              <ul className="pl-6 space-y-2 opacity-90 text-[15px] pb-4">
+                <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/disaster/blizzard`} className="block w-full">Blizzard</Link></li>
+                <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/disaster/earthquake`} className="block w-full">Earthquake</Link></li>
               </ul>
-            </div>
+            </details>"""
+content = re.sub(r'<div>\s*<h3 className="font-bold text-lg mb-2">Disaster</h3>\s*<ul className="pl-6 space-y-2 opacity-90 text-\[15px\]">\s*<li>.*?Blizzard.*?</li>\s*<li>.*?Earthquake.*?</li>\s*</ul>\s*</div>', mobile_disaster, content, flags=re.DOTALL)
 
-            <div>
-              <h3 className="font-bold text-lg mb-2">Transportation</h3>
-              <ul className="pl-6 space-y-2 opacity-90 text-[15px]">
-                <li><Link href={`/${locale}/transportation/train`}>Train</Link></li>
-                <li><Link href={`/${locale}/transportation/bus`}>Bus</Link></li>
-                <li><Link href={`/${locale}/transportation/car`}>Rental Car</Link></li>
+mobile_transportation = """            <details className="group cursor-pointer">
+              <summary className="font-bold text-lg mb-2 list-none hover:text-orange-300 transition-colors flex justify-between items-center [&::-webkit-details-marker]:hidden">
+                Transportation
+                <svg className="w-5 h-5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </summary>
+              <ul className="pl-6 space-y-2 opacity-90 text-[15px] pb-4">
+                <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/transportation/train`} className="block w-full">Train</Link></li>
+                <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/transportation/bus`} className="block w-full">Bus</Link></li>
+                <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/transportation/car`} className="block w-full">Rental Car</Link></li>
               </ul>
-            </div>
+            </details>"""
+content = re.sub(r'<div>\s*<h3 className="font-bold text-lg mb-2">Transportation</h3>\s*<ul className="pl-6 space-y-2 opacity-90 text-\[15px\]">\s*<li>.*?Train.*?</li>\s*<li>.*?Bus.*?</li>\s*<li>.*?Rental Car.*?</li>\s*</ul>\s*</div>', mobile_transportation, content, flags=re.DOTALL)
 
-            <div>
-              <h3 className="font-bold text-lg mb-2">Learning Materials</h3>
-              <ul className="pl-6 space-y-2 opacity-90 text-[15px]">
-                <li><Link href={`/${locale}/learning-materials#alerts`}>About Alerts</Link></li>
-                <li><Link href={`/${locale}/learning-materials#power-outages`}>Power outages</Link></li>
-                <li><Link href={`/${locale}/learning-materials#links`}>Links</Link></li>
+mobile_learning = """            <details className="group cursor-pointer">
+              <summary className="font-bold text-lg mb-2 list-none hover:text-orange-300 transition-colors flex justify-between items-center [&::-webkit-details-marker]:hidden">
+                Learning Materials
+                <svg className="w-5 h-5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </summary>
+              <ul className="pl-6 space-y-2 opacity-90 text-[15px] pb-4">
+                <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/learning-materials#alerts`} className="block w-full">About Alerts</Link></li>
+                <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/learning-materials#power-outages`} className="block w-full">Power outages</Link></li>
+                <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/learning-materials#links`} className="block w-full">Links</Link></li>
               </ul>
-            </div>
-          </nav>
-          
-          <div className="mt-12 text-center text-sm opacity-80">
-            ©2026 SafetyHokaido.
-          </div>
-        </div>
+            </details>"""
+content = re.sub(r'<div>\s*<h3 className="font-bold text-lg mb-2">Learning Materials</h3>\s*<ul className="pl-6 space-y-2 opacity-90 text-\[15px\]">\s*<li>.*?About Alerts.*?</li>\s*<li>.*?Power outages.*?</li>\s*<li>.*?Links.*?</li>\s*</ul>\s*</div>', mobile_learning, content, flags=re.DOTALL)
 
-        {/* Desktop Layout */}
-        <div className="hidden md:flex flex-col w-full">
-          <div className="flex justify-between items-start w-full">
-            
-            {/* Logo */}
-            <div className="w-[30%]">
-              <Link href={`/${locale}`}>
-                <Image src="/illustrations/logo_team.png" alt="SafetyHokaido" width={180} height={80} className="w-[180px] h-auto mt-4" />
-              </Link>
-            </div>
-            
-            {/* Links Columns */}
-            <div className="flex-1 flex justify-center gap-16 lg:gap-24 pl-8">
-              <div className="flex flex-col gap-6">
-                <div>
-                  <Link href={`/${locale}`} className="font-bold text-base hover:underline hover:opacity-100 transition-opacity">Top</Link>
-                </div>
-                <div>
-                  <h3 className="font-bold text-base mb-3">Disaster</h3>
-                  <ul className="pl-0 space-y-2 opacity-80 text-sm">
-                    <li><Link href={`/${locale}/disaster/blizzard`} className="hover:underline">Blizzard</Link></li>
-                    <li><Link href={`/${locale}/disaster/earthquake`} className="hover:underline">Earthquake</Link></li>
+
+# Desktop replacements (using open by default so layout doesn't completely collapse awkwardly)
+desktop_disaster = """                <details open className="group cursor-pointer">
+                  <summary className="font-bold text-base mb-3 list-none hover:text-orange-300 transition-colors flex justify-between items-center pr-4 [&::-webkit-details-marker]:hidden">
+                    Disaster
+                    <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </summary>
+                  <ul className="pl-0 space-y-2 opacity-80 text-sm overflow-hidden transition-all">
+                    <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/disaster/blizzard`} className="hover:underline block w-full">Blizzard</Link></li>
+                    <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/disaster/earthquake`} className="hover:underline block w-full">Earthquake</Link></li>
                   </ul>
-                </div>
-              </div>
+                </details>"""
+content = re.sub(r'<div>\s*<h3 className="font-bold text-base mb-3">Disaster</h3>\s*<ul className="pl-0 space-y-2 opacity-80 text-sm">\s*<li>.*?Blizzard.*?</li>\s*<li>.*?Earthquake.*?</li>\s*</ul>\s*</div>', desktop_disaster, content, flags=re.DOTALL)
 
-              <div className="flex flex-col">
-                <h3 className="font-bold text-base mb-3 mt-[44px]">Transportation</h3>
-                <ul className="pl-0 space-y-2 opacity-80 text-sm">
-                  <li><Link href={`/${locale}/transportation/train`} className="hover:underline">Train</Link></li>
-                  <li><Link href={`/${locale}/transportation/bus`} className="hover:underline">Bus</Link></li>
-                  <li><Link href={`/${locale}/transportation/car`} className="hover:underline">Rental Car</Link></li>
+
+desktop_trans = """              <details open className="flex flex-col group cursor-pointer w-full">
+                <summary className="font-bold text-base mb-3 mt-[44px] list-none hover:text-orange-300 transition-colors flex justify-between items-center pr-4 [&::-webkit-details-marker]:hidden">
+                  Transportation
+                  <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <ul className="pl-0 space-y-2 opacity-80 text-sm overflow-hidden transition-all">
+                  <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/transportation/train`} className="hover:underline block w-full">Train</Link></li>
+                  <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/transportation/bus`} className="hover:underline block w-full">Bus</Link></li>
+                  <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/transportation/car`} className="hover:underline block w-full">Rental Car</Link></li>
                 </ul>
-              </div>
+              </details>"""
+content = re.sub(r'<div className="flex flex-col">\s*<h3 className="font-bold text-base mb-3 mt-\[44px\]">Transportation</h3>\s*<ul className="pl-0 space-y-2 opacity-80 text-sm">\s*<li>.*?Train.*?</li>\s*<li>.*?Bus.*?</li>\s*<li>.*?Rental Car.*?</li>\s*</ul>\s*</div>', desktop_trans, content, flags=re.DOTALL)
 
-              <div className="flex flex-col">
-                <h3 className="font-bold text-base mb-3 mt-[44px]">Learning Materials</h3>
-                <ul className="pl-0 space-y-2 opacity-80 text-sm">
-                  <li><Link href={`/${locale}/learning-materials#alerts`} className="hover:underline">About Alerts</Link></li>
-                  <li><Link href={`/${locale}/learning-materials#power-outages`} className="hover:underline">Power outages</Link></li>
-                  <li><Link href={`/${locale}/learning-materials#links`} className="hover:underline">Links</Link></li>
+
+desktop_learn = """              <details open className="flex flex-col group cursor-pointer w-full">
+                <summary className="font-bold text-base mb-3 mt-[44px] list-none hover:text-orange-300 transition-colors flex justify-between items-center pr-4 [&::-webkit-details-marker]:hidden">
+                  Learning Materials
+                  <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <ul className="pl-0 space-y-2 opacity-80 text-sm overflow-hidden transition-all">
+                  <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/learning-materials#alerts`} className="hover:underline block w-full">About Alerts</Link></li>
+                  <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/learning-materials#power-outages`} className="hover:underline block w-full">Power outages</Link></li>
+                  <li className="transition-transform hover:translate-x-2"><Link href={`/${locale}/learning-materials#links`} className="hover:underline block w-full">Links</Link></li>
                 </ul>
-              </div>
-            </div>
+              </details>"""
+content = re.sub(r'<div className="flex flex-col">\s*<h3 className="font-bold text-base mb-3 mt-\[44px\]">Learning Materials</h3>\s*<ul className="pl-0 space-y-2 opacity-80 text-sm">\s*<li>.*?About Alerts.*?</li>\s*<li>.*?Power outages.*?</li>\s*<li>.*?Links.*?</li>\s*</ul>\s*</div>', desktop_learn, content, flags=re.DOTALL)
 
-            {/* Back to top Button */}
-            <div className="w-[10%] flex justify-end">
-              <button 
-                onClick={scrollToTop}
-                aria-label="Back to top"
-                className="w-10 h-10 bg-orange-400 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 mt-2"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m18 15-6-6-6 6"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          
-          <div className="mt-16 text-center text-sm opacity-80">
-            ©2026 SafetyHokaido.
-          </div>
-        </div>
-
-      </footer>
-    </div>
-  );
-}
-"""
+# Add missing top link animation
+content = content.replace(
+    '<Link href={`/${locale}`} className="font-bold text-lg">Top</Link>',
+    '<Link href={`/${locale}`} className="font-bold text-lg hover:text-orange-300 transition-colors">Top</Link>'
+)
+content = content.replace(
+    '<Link href={`/${locale}`} className="font-bold text-base hover:underline hover:opacity-100 transition-opacity">Top</Link>',
+    '<Link href={`/${locale}`} className="font-bold text-base hover:text-orange-300 hover:underline hover:opacity-100 transition-all">Top</Link>'
+)
 
 with open('src/components/Footer.jsx', 'w') as out_f:
-    out_f.write(new_footer)
+    out_f.write(content)

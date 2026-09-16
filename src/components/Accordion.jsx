@@ -6,7 +6,7 @@ export default function Accordion({ title, children }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className={`bg-green-500 text-white rounded-2xl shadow-md transition-all duration-300 ${isOpen ? 'p-5' : 'py-3 px-6'}`}>
+    <div className={`bg-green-700 text-white rounded-2xl shadow-md transition-all duration-300 ${isOpen ? 'p-5' : 'py-3 px-6'}`}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex justify-between items-center font-bold text-lg focus:outline-none"

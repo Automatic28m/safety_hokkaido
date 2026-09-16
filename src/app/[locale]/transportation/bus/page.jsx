@@ -12,7 +12,7 @@ export default async function BusPage({ params }) {
       <div className="w-[90%] max-w-md md:max-w-5xl lg:max-w-6xl">
         
         {/* Header */}
-        <h1 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2 leading-none uppercase" dangerouslySetInnerHTML={{ __html: tTrans.raw('title') }} />
+        <h1 className="font-mittraphap text-5xl font-black text-black tracking-wider mb-2 leading-none uppercase" dangerouslySetInnerHTML={{ __html: tTrans.raw('title') }} />
         <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
 
         {/* Tabs */}
@@ -30,7 +30,7 @@ export default async function BusPage({ params }) {
 
         {/* Content Box */}
         <div className="bg-white rounded-b-3xl shadow-md p-6 -mt-8 pt-8 mb-12">
-          <h2 className="font-torsilp text-4xl font-black text-black mb-4 uppercase">{t('title')}</h2>
+          <h2 className="font-mittraphap text-4xl font-black text-black mb-4 uppercase">{t('title')}</h2>
           
           <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden mb-6 border-2 border-black bg-orange-400">
             <Image 
@@ -117,14 +117,14 @@ export default async function BusPage({ params }) {
         </div>
 
         {/* Links Section */}
-        <h2 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2">{tTrans('links')}</h2>
+        <h2 className="font-mittraphap text-5xl font-black text-black tracking-wider mb-2">{tTrans('links')}</h2>
         <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
 
         <div className="space-y-4 mb-10">
-          <Link href={`/${locale}/learning-materials`} className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
+          <Link href="https://wwwtb.mlit.go.jp/hokkaido/unkoujouhou/index.html" target="_blank" className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-500 shrink-0"></div>
+                <div className="w-3 h-3 rounded-full bg-green-700 shrink-0"></div>
                 <h3 className="text-lg font-bold text-black leading-tight">Hokkaido District Transport Bureau</h3>
               </div>
               <p className="text-gray-600 text-sm border-t border-gray-200 pt-2 mt-2">Public Transportation Service Updates in Hokkaido</p>
@@ -134,10 +134,10 @@ export default async function BusPage({ params }) {
             </div>
           </Link>
 
-          <Link href={`/${locale}/learning-materials`} className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
+          <Link href="https://www.jrhokkaidobus.com/en/" target="_blank" className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-500 shrink-0"></div>
+                <div className="w-3 h-3 rounded-full bg-green-700 shrink-0"></div>
                 <h3 className="text-lg font-bold text-black leading-tight">{t('link2Title')}</h3>
               </div>
               <p className="text-gray-600 text-sm border-t border-gray-200 pt-2 mt-2">{t('link2Desc')}</p>

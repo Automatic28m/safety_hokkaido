@@ -1,4 +1,10 @@
-'use client';
+import re
+
+with open('src/components/Footer.jsx', 'r') as f:
+    content = f.read()
+
+# I will rewrite Footer.jsx entirely to include a FooterAccordion component to handle the smooth slide.
+new_footer = """'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -87,9 +93,8 @@ export default function Footer() {
             </FooterAccordion>
           </nav>
           
-                    <div className="mt-12 text-center text-sm opacity-80 flex flex-col items-center gap-2">
-            <div>Contact: <a href="mailto:phanlop.auto@gmail.com" className="hover:text-orange-300 transition-colors hover:underline">phanlop.auto@gmail.com</a></div>
-            <div>©2026 SafetyHokaido.</div>
+          <div className="mt-12 text-center text-sm opacity-80">
+            ©2026 SafetyHokaido.
           </div>
         </div>
 
@@ -147,9 +152,8 @@ export default function Footer() {
             </div>
           </div>
           
-                    <div className="mt-16 text-center text-sm opacity-80 flex flex-col items-center gap-2">
-            <div>Contact: <a href="mailto:phanlop.auto@gmail.com" className="hover:text-orange-300 transition-colors hover:underline">phanlop.auto@gmail.com</a></div>
-            <div>©2026 SafetyHokkaido.</div>
+          <div className="mt-16 text-center text-sm opacity-80">
+            ©2026 SafetyHokkaido.
           </div>
         </div>
 
@@ -157,3 +161,7 @@ export default function Footer() {
     </div>
   );
 }
+"""
+
+with open('src/components/Footer.jsx', 'w') as out_f:
+    out_f.write(new_footer)

@@ -72,7 +72,7 @@ export default async function Home({ params }) {
         {/* Banner Text Overlay (Mobile + Desktop) */}
         <div className="flex absolute left-0 w-full h-full z-10 pointer-events-none">
           <div className="w-full max-w-md md:max-w-5xl lg:max-w-6xl mx-auto px-6 md:px-0 pt-24 md:pt-28">
-            <h1 className="font-torsilp text-white font-black leading-none drop-shadow-[0_4px_4px_rgba(0,0,0,0.3)] flex flex-col uppercase tracking-wider text-[3.5rem] md:text-[clamp(4rem,8vw,7rem)]">
+            <h1 className="font-mittraphap text-white font-black leading-none drop-shadow-[0_4px_4px_rgba(0,0,0,0.3)] flex flex-col uppercase tracking-wider text-[3.5rem] md:text-[clamp(4rem,8vw,7rem)]">
               <span>Safety</span>
               <span>Hokkaido</span>
             </h1>
@@ -98,7 +98,7 @@ export default async function Home({ params }) {
               </svg>
               <span className="text-sm font-medium">{t('location')}</span>
             </div>
-            <h2 className="text-2xl font-bold text-green-500 mb-4">
+            <h2 className="text-2xl font-bold text-green-700 mb-4">
               {t('weatherTitle')}
             </h2>
             
@@ -131,7 +131,7 @@ export default async function Home({ params }) {
               </svg>
               <span className="text-sm font-medium">{t('location')}</span>
             </div>
-            <h2 className="text-2xl font-bold text-green-500 mb-4">
+            <h2 className="text-2xl font-bold text-green-700 mb-4">
               {t('recentEarthquakeTitle')}
             </h2>
             
@@ -178,8 +178,8 @@ export default async function Home({ params }) {
         {/* About Section */}
         <section className="w-full mb-12 text-gray-800 bg-white/60 md:bg-transparent rounded-3xl md:rounded-none p-6 md:p-0 shadow-sm md:shadow-none max-w-4xl">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <h2 className="text-xl font-bold text-green-500">{t('aboutTitle')}</h2>
+            <div className="w-3 h-3 rounded-full bg-green-700"></div>
+            <h2 className="text-xl font-bold text-green-700">{t('aboutTitle')}</h2>
           </div>
           <p className="text-lg md:text-xl leading-relaxed">
             {t('aboutText')}
@@ -187,8 +187,8 @@ export default async function Home({ params }) {
         </section>
 
         {/* What Do You Need Section */}
-        <section className="w-full bg-green-500 rounded-3xl p-6 md:p-10 pb-8 md:pb-12 mb-12 md:mb-20 shadow-lg">
-          <h2 className="font-torsilp text-4xl md:text-6xl font-black text-white leading-tight mb-2 uppercase tracking-wider" dangerouslySetInnerHTML={{ __html: t.raw('whatDoYouNeed') }} />
+        <section className="w-full bg-green-700 rounded-3xl p-6 md:p-10 pb-8 md:pb-12 mb-12 md:mb-20 shadow-lg">
+          <h2 className="font-mittraphap text-4xl md:text-6xl font-black text-white leading-tight mb-2 uppercase tracking-wider" dangerouslySetInnerHTML={{ __html: t.raw('whatDoYouNeed') }} />
           <div className="w-16 md:w-24 h-[2px] md:h-[3px] bg-white mb-4 md:mb-6"></div>
           <p className="text-white font-medium mb-6 md:mb-10">{t('pleaseSelect')}</p>
 
@@ -204,13 +204,13 @@ export default async function Home({ params }) {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Link href={`/${locale}/disaster/blizzard`} className="block relative aspect-square rounded-xl overflow-hidden shadow-inner group">
+              <div className="grid grid-rows-2 gap-3">
+                <Link href={`/${locale}/disaster/blizzard`} className="block relative aspect-video rounded-xl overflow-hidden shadow-inner group">
                   <Image src="/illustrations/Blizzard.png" alt="Blizzard" fill className="object-cover group-hover:scale-105 transition-transform" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                   <div className="absolute bottom-2 left-0 right-0 text-center text-white font-bold text-lg">{t('blizzard')}</div>
                 </Link>
-                <Link href={`/${locale}/disaster/earthquake`} className="block relative aspect-square rounded-xl overflow-hidden shadow-inner group">
+                <Link href={`/${locale}/disaster/earthquake`} className="block relative aspect-video rounded-xl overflow-hidden shadow-inner group">
                   <Image src="/illustrations/Earthquake .png" alt="Earthquake" fill className="object-cover group-hover:scale-105 transition-transform" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                   <div className="absolute bottom-2 left-0 right-0 text-center text-white font-bold text-lg">{t('earthquake')}</div>
@@ -255,7 +255,7 @@ export default async function Home({ params }) {
         {/* Hokkaido Information Section */}
         <section className="w-full mb-8 relative md:flex md:items-center">
           <div className="md:w-1/2 relative z-10">
-            <h2 className="font-torsilp text-4xl md:text-6xl font-black text-green-500 leading-none mb-4 uppercase tracking-wider" dangerouslySetInnerHTML={{ __html: t.raw('infoTitle') }} />
+            <h2 className="font-mittraphap text-4xl md:text-6xl font-black text-green-700 leading-none mb-4 uppercase tracking-wider" dangerouslySetInnerHTML={{ __html: t.raw('infoTitle') }} />
             <p className="text-gray-700 leading-relaxed text-lg md:text-xl" dangerouslySetInnerHTML={{ __html: t.raw('infoText') }} />
           </div>
           

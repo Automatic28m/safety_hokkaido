@@ -7,7 +7,7 @@ export default function BlizzardPage() {
       <div className="w-[90%] max-w-md">
         
         {/* Header */}
-        <h1 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2">
+        <h1 className="font-mittraphap text-5xl font-black text-black tracking-wider mb-2">
           DISASTER
         </h1>
         <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
@@ -24,7 +24,7 @@ export default function BlizzardPage() {
 
         {/* Content Box */}
         <div className="bg-white rounded-b-3xl rounded-tr-3xl shadow-md p-6 -mt-8 pt-8 mb-12">
-          <h2 className="font-torsilp text-4xl font-black text-black mb-4">BLIZZARD</h2>
+          <h2 className="font-mittraphap text-4xl font-black text-black mb-4">BLIZZARD</h2>
           
           <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden mb-6 border-2 border-black">
             <Image 
@@ -44,7 +44,7 @@ export default function BlizzardPage() {
 
           <div className="space-y-4 mb-8">
             {/* Expanded Green Button */}
-            <div className="bg-green-500 rounded-2xl p-4 text-white shadow-md">
+            <div className="bg-green-700 rounded-2xl p-4 text-white shadow-md">
               <div className="flex justify-between items-center font-bold text-lg mb-2 cursor-pointer">
                 <span>What if it's happening now?</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
@@ -53,7 +53,7 @@ export default function BlizzardPage() {
             </div>
             
             {/* Regular Green Button */}
-            <div className="bg-green-500 rounded-full py-3 px-6 text-white font-bold text-lg shadow-md flex justify-between items-center cursor-pointer hover:bg-green-600 transition-colors">
+            <div className="bg-green-700 rounded-full py-3 px-6 text-white font-bold text-lg shadow-md flex justify-between items-center cursor-pointer hover:bg-green-600 transition-colors">
               <span>What can happen?</span>
             </div>
           </div>
@@ -65,28 +65,28 @@ export default function BlizzardPage() {
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <svg className="text-green-500 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <h4 className="text-xl font-bold text-green-500">Hotel or Room</h4>
+                <svg className="text-green-700 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <h4 className="text-xl font-bold text-green-700">Hotel or Room</h4>
               </div>
               <p className="text-gray-700">Do not go outside while a heavy snow or blizzard warning is in effect. Change or delay your plans. Check the weather forecast and transport status before you leave.</p>
             </div>
 
             <div className="pl-4 border-l-2 border-gray-200 relative">
-              <div className="absolute w-3 h-3 bg-green-500 rounded-full -left-[7px] top-1.5"></div>
+              <div className="absolute w-3 h-3 bg-green-700 rounded-full -left-[7px] top-1.5"></div>
               <h5 className="text-lg font-bold text-gray-800 mb-1">If you still want to go out in heavy snow</h5>
               <p className="text-gray-700 text-sm">Wear warm layers, and cover your skin with a hat, gloves, and scarf. Stay close by and avoid going far.</p>
             </div>
 
             <div>
               <div className="flex items-center gap-2 mb-2 mt-6">
-                <svg className="text-green-500 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-                <h4 className="text-xl font-bold text-green-500">If you're outside</h4>
+                <svg className="text-green-700 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+                <h4 className="text-xl font-bold text-green-700">If you're outside</h4>
               </div>
               <p className="text-gray-700">Check train and bus status before you head back — delays and cancellations are common in heavy snow. The subway is the most reliable option, as it runs underground and is less affected by snow.</p>
             </div>
 
             <div className="pl-4 border-l-2 border-gray-200 relative">
-              <div className="absolute w-3 h-3 bg-green-500 rounded-full -left-[7px] top-1.5"></div>
+              <div className="absolute w-3 h-3 bg-green-700 rounded-full -left-[7px] top-1.5"></div>
               <h5 className="text-lg font-bold text-gray-800 mb-1">If you can't get back</h5>
               <p className="text-gray-700 text-sm">Don't force your way through a blizzard. Find a warm place to stay and wait it out. If you can't return to your hotel, contact them, and look for a nearby hotel if needed.</p>
             </div>
@@ -94,14 +94,14 @@ export default function BlizzardPage() {
         </div>
 
         {/* Links Section */}
-        <h2 className="font-torsilp text-5xl font-black text-black tracking-wider mb-2">LINKS</h2>
+        <h2 className="font-mittraphap text-5xl font-black text-black tracking-wider mb-2">LINKS</h2>
         <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
 
         <div className="space-y-4">
           <Link href="/learning-materials" className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-700"></div>
                 <h3 className="text-xl font-bold text-black">Evacuation Shelter Map</h3>
               </div>
               <p className="text-gray-600 text-sm border-t border-gray-200 pt-2 mt-2">Find the nearest evacuation shelter from your location.</p>
@@ -114,7 +114,7 @@ export default function BlizzardPage() {
           <Link href="/learning-materials" className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-700"></div>
                 <h3 className="text-xl font-bold text-black">JMA – Weather Warnings</h3>
               </div>
               <p className="text-gray-600 text-sm border-t border-gray-200 pt-2 mt-2">Official weather warnings, including heavy snow, in multiple languages.</p>

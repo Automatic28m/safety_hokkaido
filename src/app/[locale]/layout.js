@@ -23,9 +23,9 @@ const anuphan = localFont({
   variable: "--font-anuphan",
 });
 
-const torsilp = localFont({
-  src: "../../fonts/TorsilpTontula.ttf",
-  variable: "--font-torsilp",
+const mittraphap = localFont({
+  src: "../../fonts/FCMittraphap.ttf",
+  variable: "--font-mittraphap",
 });
 
 export const metadata = {
@@ -45,7 +45,7 @@ export default async function RootLayout({ children, params }) {
   return (
     <html
       lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable} ${anuphan.variable} ${torsilp.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${anuphan.variable} ${mittraphap.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#f4f7f6]">
         <NextIntlClientProvider messages={messages}>

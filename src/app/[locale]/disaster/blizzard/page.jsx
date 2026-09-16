@@ -12,7 +12,7 @@ export default async function BlizzardPage({ params }) {
       <div className="w-[90%] max-w-md md:max-w-5xl lg:max-w-6xl">
         
         {/* Header */}
-        <h1 className="font-torsilp text-5xl md:text-8xl font-black text-black tracking-wider mb-2 md:mb-6 uppercase">
+        <h1 className="font-mittraphap text-5xl md:text-8xl font-black text-black tracking-wider mb-2 md:mb-6 uppercase">
           {t('title')}
         </h1>
         <div className="border-b-2 border-dashed border-gray-400 mb-6"></div>
@@ -31,7 +31,7 @@ export default async function BlizzardPage({ params }) {
         <div className="bg-white rounded-b-3xl rounded-tr-3xl shadow-md p-6 md:p-10 -mt-8 pt-8 md:pt-12 mb-12 relative">
           
           {/* Title and Banner - Full width on both mobile and desktop */}
-          <h2 className="font-torsilp text-4xl md:text-6xl font-black text-black mb-4">{t('blizzardHeading')}</h2>
+          <h2 className="font-mittraphap text-4xl md:text-6xl font-black text-black mb-4">{t('blizzardHeading')}</h2>
           
           <div className="relative w-full aspect-[2/1] md:aspect-[3/1] rounded-xl overflow-hidden mb-8 md:mb-10 border-2 border-black">
             <Image 
@@ -83,28 +83,28 @@ export default async function BlizzardPage({ params }) {
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <svg className="text-green-500 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <h4 className="text-xl font-bold text-green-500">{t('hotelRoom')}</h4>
+                <svg className="text-green-700 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <h4 className="text-xl font-bold text-green-700">{t('hotelRoom')}</h4>
               </div>
               <p className="text-gray-700">{t('hotelRoomDesc')}</p>
             </div>
 
             <div className="pl-4 border-l-2 border-gray-200 relative">
-              <div className="absolute w-3 h-3 bg-green-500 rounded-full -left-[7px] top-1.5"></div>
+              <div className="absolute w-3 h-3 bg-green-700 rounded-full -left-[7px] top-1.5"></div>
               <h5 className="text-lg font-bold text-gray-800 mb-1">{t('wantToGoOut')}</h5>
               <p className="text-gray-700 text-sm">{t('wantToGoOutDesc')}</p>
             </div>
 
             <div>
               <div className="flex items-center gap-2 mb-2 mt-6">
-                <svg className="text-green-500 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-                <h4 className="text-xl font-bold text-green-500">{t('outside')}</h4>
+                <svg className="text-green-700 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+                <h4 className="text-xl font-bold text-green-700">{t('outside')}</h4>
               </div>
               <p className="text-gray-700">{t('outsideDesc')}</p>
             </div>
 
             <div className="pl-4 border-l-2 border-gray-200 relative">
-              <div className="absolute w-3 h-3 bg-green-500 rounded-full -left-[7px] top-1.5"></div>
+              <div className="absolute w-3 h-3 bg-green-700 rounded-full -left-[7px] top-1.5"></div>
               <h5 className="text-lg font-bold text-gray-800 mb-1">{t('cantGetBack')}</h5>
               <p className="text-gray-700 text-sm">{t('cantGetBackDesc')}</p>
             </div>
@@ -115,14 +115,14 @@ export default async function BlizzardPage({ params }) {
           </div>
 
         {/* Links Section */}
-        <h2 className="font-torsilp text-5xl md:text-7xl font-black text-black tracking-wider mb-2">{t('linksTitle')}</h2>
+        <h2 className="font-mittraphap text-5xl md:text-7xl font-black text-black tracking-wider mb-2">{t('linksTitle')}</h2>
         <div className="border-b-2 border-dashed border-gray-400 mb-6 md:mb-10"></div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-10">
-          <Link href={`/${locale}/learning-materials`} className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
+          <Link href="https://crisis.yahoo.co.jp/map/" target="_blank" className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-700"></div>
                 <h3 className="text-xl font-bold text-black">{t('link1Title')}</h3>
               </div>
               <p className="text-gray-600 text-sm border-t border-gray-200 pt-2 mt-2">{t('link1Desc')}</p>
@@ -132,10 +132,10 @@ export default async function BlizzardPage({ params }) {
             </div>
           </Link>
 
-          <Link href={`/${locale}/learning-materials`} className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
+          <Link href="https://www.jma.go.jp/jma/indexe.html" target="_blank" className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-700"></div>
                 <h3 className="text-xl font-bold text-black">{t('link2Title')}</h3>
               </div>
               <p className="text-gray-600 text-sm border-t border-gray-200 pt-2 mt-2">{t('link2Desc')}</p>

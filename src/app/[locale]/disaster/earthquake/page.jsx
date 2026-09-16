@@ -13,7 +13,7 @@ export default async function EarthquakePage({ params }) {
       <div className="w-[90%] max-w-md md:max-w-5xl lg:max-w-6xl">
         
         {/* Header */}
-        <h1 className="font-torsilp text-5xl md:text-8xl font-black text-black tracking-wider mb-2 md:mb-6 uppercase">
+        <h1 className="font-mittraphap text-5xl md:text-8xl font-black text-black tracking-wider mb-2 md:mb-6 uppercase">
           {t('title')}
         </h1>
         <div className="border-b-2 border-dashed border-gray-400 mb-6 md:mb-10"></div>
@@ -32,7 +32,7 @@ export default async function EarthquakePage({ params }) {
         <div className="bg-white rounded-tr-3xl rounded-b-none md:rounded-tr-[32px] shadow-md p-6 md:p-10 -mt-8 pt-8 md:pt-12 relative">
           
           {/* Earthquake Title and Banner */}
-          <h2 className="font-torsilp text-4xl md:text-6xl font-black text-black mb-4">{t('earthquakeHeading')}</h2>
+          <h2 className="font-mittraphap text-4xl md:text-6xl font-black text-black mb-4">{t('earthquakeHeading')}</h2>
           
           <div className="relative w-full aspect-[2/1] md:aspect-[3/1] rounded-xl overflow-hidden mb-8 md:mb-10 border-2 border-black">
             <Image
@@ -88,7 +88,7 @@ export default async function EarthquakePage({ params }) {
                     <h4 className="text-black font-bold text-lg">{t('level1Title')}</h4>
                     <p className="text-gray-600 text-sm">{t('level1Desc')}</p>
                   </div>
-                  <div className="bg-green-500 text-white font-bold text-xs py-2 px-4 rounded-xl text-center w-24" dangerouslySetInnerHTML={{ __html: t.raw('level1Badge') }} />
+                  <div className="bg-green-700 text-white font-bold text-xs py-2 px-4 rounded-xl text-center w-24" dangerouslySetInnerHTML={{ __html: t.raw('level1Badge') }} />
                 </div>
 
                 <div className="border-2 border-black rounded-2xl p-3 flex justify-between items-center bg-white shadow-sm">
@@ -141,7 +141,7 @@ export default async function EarthquakePage({ params }) {
           </div>
 
           <div className="pt-16 md:pt-0">
-            <h2 className="font-torsilp text-4xl md:text-6xl font-black text-black mb-4">{t('tsunamiHeading')}</h2>
+            <h2 className="font-mittraphap text-4xl md:text-6xl font-black text-black mb-4">{t('tsunamiHeading')}</h2>
             <div className="relative w-full aspect-[2/1] md:aspect-[3/1] rounded-xl overflow-hidden mb-8 md:mb-10 border-2 border-black">
               <Image
                 src="/illustrations/Tsunami.png"
@@ -185,14 +185,14 @@ export default async function EarthquakePage({ params }) {
         </div>
 
         {/* Links Section */}
-        <h2 className="font-torsilp text-5xl md:text-7xl font-black text-black tracking-wider mb-2 mt-12">{tBlizzard('linksTitle')}</h2>
+        <h2 className="font-mittraphap text-5xl md:text-7xl font-black text-black tracking-wider mb-2 mt-12">{tBlizzard('linksTitle')}</h2>
         <div className="border-b-2 border-dashed border-gray-400 mb-6 md:mb-10"></div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-10">
-          <Link href={`/${locale}/learning-materials`} className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
+          <Link href="https://crisis.yahoo.co.jp/map/" target="_blank" className="bg-white rounded-2xl p-6 shadow-md flex items-center justify-between group hover:shadow-lg transition-shadow">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-700"></div>
                 <h3 className="text-xl font-bold text-black">{t('link1Title')}</h3>
               </div>
               <p className="text-gray-600 text-sm border-t border-gray-200 pt-2 mt-2">{t('link1Desc')}</p>
