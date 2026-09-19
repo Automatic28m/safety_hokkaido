@@ -68,6 +68,11 @@ class Generator:
         if active_tools:
             payload["tools"] = active_tools
             payload["tool_choice"] = "auto"
+        else:
+            # Bug fix: explicitly disable ALL tools (including built-in browser.search)
+            # Without this, gpt-oss-120b falls back to its own browser tool even
+            # when we pass no tools, causing "Tool choice is none, but model called a tool"
+            payload["tool_choice"] = "none"
         
         # Initial request to Groq with Tools and RAG context
         response = requests.post(self.api_url, headers=headers, json=payload)

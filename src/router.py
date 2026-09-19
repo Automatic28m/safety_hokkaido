@@ -1,3 +1,4 @@
+import re
 import json
 import requests
 from typing import Optional
@@ -5,7 +6,6 @@ from config import config
 
 # ---------------------------------------------------------------------------
 # Router System Prompt
-# Instructs a small, fast LLM to classify the user's intent into a route.
 # ---------------------------------------------------------------------------
 ROUTER_SYSTEM_PROMPT = """
 You are an intent classifier for a Hokkaido disaster safety application.
@@ -23,7 +23,7 @@ Available routes:
 - "rag+realtime" → Questions that need BOTH safety guidance AND live data.
                    (e.g. "Is it safe to drive to Otaru right now?", "Should I take the train given the earthquake warning?")
 
-You MUST reply with ONLY valid JSON. No extra text.
+You MUST reply with ONLY valid JSON and nothing else. No markdown, no explanation.
 Format: { "route": "<route>", "confidence": <0.0-1.0>, "reasoning": "<brief reason>" }
 
 Example:
@@ -49,7 +49,7 @@ KEYWORD_RULES = {
     ],
 }
 
-CONFIDENCE_THRESHOLD = 0.70  # If below this, use keyword fallback
+CONFIDENCE_THRESHOLD = 0.70
 
 
 class Router:
@@ -72,13 +72,6 @@ class Router:
     def classify(self, query: str, chat_history: list = None) -> dict:
         """
         Classifies the user query and returns a routing decision.
-
-        Args:
-            query:        The user's current message.
-            chat_history: Recent conversation history for context.
-
-        Returns:
-            dict: { "route": str, "confidence": float, "reasoning": str }
         """
         messages = [{"role": "system", "content": ROUTER_SYSTEM_PROMPT}]
 
@@ -100,19 +93,31 @@ class Router:
                 json={
                     "model": self.router_model,
                     "messages": messages,
-                    "temperature": 0.0,   # Deterministic output for routing
+                    "temperature": 0.0,
                     "max_tokens": 120,
-                    "response_format": {"type": "json_object"}
+                    # NOTE: response_format json_object is NOT supported by llama3-8b
+                    # We parse JSON manually from the raw text instead
                 },
                 timeout=10
             )
 
-            content = response.json()["choices"][0]["message"]["content"]
-            result = json.loads(content)
+            raw = response.json()
 
-            # Validate the route field exists
+            # Bug fix: guard against API errors that return no 'choices'
+            if "choices" not in raw:
+                raise ValueError(f"Groq router API error: {raw.get('error', raw)}")
+
+            content = raw["choices"][0]["message"]["content"]
+
+            # Robustly extract JSON even if model wraps it in markdown code fences
+            json_match = re.search(r'\{.*?\}', content, re.DOTALL)
+            if not json_match:
+                raise ValueError(f"No JSON found in router response: {content}")
+
+            result = json.loads(json_match.group())
+
             if "route" not in result:
-                raise ValueError("Router response missing 'route' field.")
+                raise ValueError(f"Router response missing 'route': {result}")
 
             # Apply keyword fallback if confidence is too low
             confidence = result.get("confidence", 1.0)
@@ -121,7 +126,7 @@ class Router:
                 if fallback_route:
                     print(f"[Router] Low confidence ({confidence:.2f}). Keyword fallback → '{fallback_route}'")
                     result["route"] = fallback_route
-                    result["reasoning"] = f"[Keyword fallback] Overrode low-confidence LLM route."
+                    result["reasoning"] = "[Keyword fallback] Overrode low-confidence LLM route."
 
             print(
                 f"[Router] Route='{result['route']}' | "
