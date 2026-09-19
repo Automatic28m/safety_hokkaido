@@ -1,0 +1,36 @@
+{
+  "When a tsunami warning is issued": [
+    {
+      "situation": "Tsunami Advisory",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/tsunami/t02.html",
+      "advices": [
+        "Tsunami may occur. Tsunami may occur in rivers as well.",
+        "If you are in the ocean, immediately get out of the water and evacuate away from the shores.",
+        "Tsunami waves are expected to hit repeatedly. Do not go near waterfronts until warning is lifted.",
+        "Return to your lodging facility and pay attention to information updates."
+      ]
+    },
+    {
+      "situation": "Tsunami Warning",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/tsunami/t03.html",
+      "advices": [
+        "Tsunami may occur. Tsunami may occur in rivers as well.",
+        "Tsunami waves are expected to hit repeatedly. Do not go near waterfronts until warning is lifted.",
+        "Watch the actions of those around you and evacuate to higher grounds or tsunami shelters.",
+        "When warning is lifted",
+        "Return to your lodging facility and pay attention to information updates."
+      ]
+    },
+    {
+      "situation": "Major Tsunami Warning",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/tsunami/t04.html",
+      "advices": [
+        "A mega-tsunami may occur. Tsunami may occur in rivers as well.",
+        "Tsunami waves are expected to hit repeatedly. Do not go near waterfronts until warning is lifted.",
+        "Watch the actions of those around you and evacuate to higher grounds or tsunami shelters.",
+        "When warning is lifted",
+        "Return to your lodging facility and pay attention to information updates."
+      ]
+    }
+  ]
+}

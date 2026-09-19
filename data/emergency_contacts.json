@@ -1,0 +1,68 @@
+{
+  "Medical & Emergency Contacts": [
+    {
+      "situation": "Fire, Traffic Accident, or Medical Emergency (119)",
+      "url": "Emergency Hotlines",
+      "advices": [
+        "Dial 119 for the Fire station or Ambulance.",
+        "When to use: When encountering a fire or a severe traffic accident. Use this number when there is a seriously injured or seriously sick person."
+      ]
+    },
+    {
+      "situation": "Crime or Traffic Accident (110)",
+      "url": "Emergency Hotlines",
+      "advices": [
+        "Dial 110 for the Police station.",
+        "When to use: When encountering a traffic accident or when encountering criminal actions such as theft or violence."
+      ]
+    },
+    {
+      "situation": "Tourist Information and Emergency Assistance",
+      "url": "Emergency Hotlines",
+      "advices": [
+        "Dial 050-3816-2787 for the Japan Visitor Hotline (JNTO Call Center).",
+        "When to use: Call for general tourist information or for multilingual assistance in case of accidents or emergencies."
+      ]
+    },
+    {
+      "situation": "Emergencies at Sea (118)",
+      "url": "Emergency Hotlines",
+      "advices": [
+        "Dial 118 for the Japan Coast Guard.",
+        "When to use: For emergencies at sea, such as boating accidents, drownings, or if someone falls into the ocean."
+      ]
+    },
+    {
+      "situation": "Medical Consultation / Unsure if it's an emergency",
+      "url": "Emergency Hotlines",
+      "advices": [
+        "Dial #7119 for the Emergency Medical Consultation Center.",
+        "When to use: If you are feeling suddenly unwell or injured but aren't sure if it's severe enough to call an ambulance (119) or if you should just visit a hospital yourself. Medical specialists will advise you on what to do."
+      ]
+    },
+    {
+      "situation": "Finding Multilingual Clinics and Hospitals",
+      "url": "Emergency Hotlines",
+      "advices": [
+        "Dial 03-6233-9266 for the AMDA International Medical Information Center.",
+        "When to use: They provide multilingual support to help foreigners find clinics and hospitals that speak their language, and they can explain how the Japanese medical system works."
+      ]
+    },
+    {
+      "situation": "Mental Health Support or Travel Stress",
+      "url": "Emergency Hotlines",
+      "advices": [
+        "Dial 03-5774-0992 for the TELL Lifeline.",
+        "When to use: A dedicated, confidential English-speaking lifeline for mental health crises, severe travel stress, or counseling."
+      ]
+    },
+    {
+      "situation": "Hokkaido Local Support and Disaster Navigation",
+      "url": "Emergency Hotlines",
+      "advices": [
+        "Dial 011-200-9595 for the Hokkaido Foreign Resident Support Center.",
+        "When to use: This is a highly relevant local number for Hokkaido. They offer multilingual consultation services regarding local medical care inquiries, disaster support, and navigating Hokkaido's systems."
+      ]
+    }
+  ]
+}

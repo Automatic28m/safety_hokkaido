@@ -1,0 +1,112 @@
+{
+  "I am inside a building": [
+    {
+      "situation": "At a hotel or an accommodation",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e04.html",
+      "advices": [
+        "Protect your head and take shelter under a durable table.",
+        "When tremor has stopped",
+        "Open the door and check for entrance/exit ways. Follow instructions given by your lodging facility.",
+        "Indoors may be safer at times. Try not to hastily run outside.\nRegularly check for emergency exits."
+      ]
+    },
+    {
+      "situation": "At sightseeing/cultural/commercial facilities",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e05.html",
+      "advices": [
+        "Protect your head and stay safe in an open hall space or near a pillar that will not move or have fallen objects.",
+        "When tremor has stopped",
+        "Follow staff instructions. Act calmly.",
+        "Avoid evacuating by elevators that have not been ensured safety.",
+        "When safety is confirmed",
+        "Pay attention to aftershocks and secondary disasters and return to your lodging facility."
+      ]
+    },
+    {
+      "situation": "Inside an underground space",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e06.html",
+      "advices": [
+        "Stay calm, protect your head, and wait for tremor to stop.",
+        "If there are no fire risks, undergrounds are relatively safe.",
+        "When tremor has stopped",
+        "If emergency lights turn on, evacuate by walking along the walls and follow staff instructions.",
+        "When safety is confirmed",
+        "Pay attention to aftershocks and secondary disasters and return to your lodging facility."
+      ]
+    },
+    {
+      "situation": "In elevators",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e07.html",
+      "advices": [
+        "Press all floor buttons and get off at the floor where elevator stops.",
+        "Check the situation of the floor you are getting off at and take action.",
+        "When tremor has stopped",
+        "If you are stuck inside, make contact with the outside by pressing the \"Emergency Call Button\".  After being rescued, follow staff instructions.",
+        "Disaster prevention stockpiles may be stored inside the elevator. Calmly wait for rescue.",
+        "When safety is confirmed",
+        "Pay attention to aftershocks and secondary disasters and return to your lodging facility."
+      ]
+    }
+  ],
+  "I am outside/inside a vehicle": [
+    {
+      "situation": "In downtown area/office building areas",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e08.html",
+      "advices": [
+        "Protect your head with a bag and be careful of falling objects. Try to stay away from building structures.",
+        "When tremor has stopped",
+        "Pay attention to aftershocks and secondary disasters. Evacuate to an open space along with others.",
+        "When safety is confirmed",
+        "Pay attention to aftershocks and secondary disasters and return to your lodging facility."
+      ]
+    },
+    {
+      "situation": "Waterfronts (coastal areas, riversides)",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e09.html",
+      "advices": [
+        "Tsunami may occur. Tsunami may occur in rivers as well.",
+        "Tsunami waves are expected to hit repeatedly. Do not go near waterfronts until warning is lifted.",
+        "When tremor has stopped",
+        "Watch the actions of those around you and evacuate to higher grounds or tsunami shelters.",
+        "When safety is confirmed",
+        "Pay attention to aftershocks and secondary disasters and return to your lodging facility."
+      ]
+    },
+    {
+      "situation": "In sightseeing areas",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e10.html",
+      "advices": [
+        "Protect your head with a bag and be careful of falling objects. Try to stay away from building structures.",
+        "When tremor has stopped",
+        "Evacuate to a safe area such as an open space or shelter.",
+        "When safety is confirmed",
+        "Pay attention to aftershocks and secondary disasters and return to your lodging facility."
+      ]
+    },
+    {
+      "situation": "Inside a vehicle",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e11.html",
+      "advices": [
+        "Hold onto handrails and protect your head.",
+        "When an earthquake is detected, an emergency stop or emergency brake may be activated.",
+        "When tremor has stopped",
+        "When the vehicle stops, follow staff instructions.",
+        "If you are on a train or a subway ride, it is very dangerous to step down onto the tracks on your own. Act calmly.",
+        "When safety is confirmed",
+        "Pay attention to aftershocks and secondary disasters and return to your lodging facility."
+      ]
+    },
+    {
+      "situation": "While driving a rental car",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/emergency/earthquake/e12.html",
+      "advices": [
+        "Avoid sudden braking, park the car on the left side of the road, and stop the engine.",
+        "When tremor has stopped",
+        "Obtain disaster information. If you are going to evacuate, leave the car keys in ignition, close all windows and doors but keep them unlocked and evacuate on foot.",
+        "Write down and leave a contact where it is easily visible and take your valuables and automobile inspection certificate with you.",
+        "When safety is confirmed",
+        "In case you are in a rental car, call the rental car agent and ask for instructions."
+      ]
+    }
+  ]
+}
