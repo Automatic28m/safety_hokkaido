@@ -1,8 +1,11 @@
 import requests
+from config import config
 
 def get_real_time_weather(city_name: str) -> str:
     """Fetches real-time weather from Meteosource API"""
-    api_key = "nrv550ngnwo9vd4fdji129lpy7wlxk2xpn12czq0"
+    api_key = config.METEOSOURCE_API_KEY
+    if not api_key:
+        return "Weather service is unavailable because METEOSOURCE_API_KEY is not configured."
     try:
         find_url = f"https://www.meteosource.com/api/v1/free/find_places_prefix?text={city_name}&key={api_key}"
         find_res = requests.get(find_url).json()
