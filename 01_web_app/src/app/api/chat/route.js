@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 
 export const maxDuration = 60; 
 
+const backendApiUrl = process.env.BACKEND_API_URL || 'http://127.0.0.1:8000';
+
 export async function POST(req) {
     try {
         const payload = await req.json();
@@ -9,7 +11,7 @@ export async function POST(req) {
         console.log("Next.js Proxy: Forwarding user query and history to Python Agentic RAG Backend...");
         
         try {
-            const ragResponse = await fetch('http://127.0.0.1:8000/ask', {
+            const ragResponse = await fetch(`${backendApiUrl}/ask`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
