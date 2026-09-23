@@ -110,13 +110,13 @@ class Generator:
                     
             # Send the final request back to Groq (which now contains RAG Rules + Real-Time Data)
             payload["messages"] = messages
-            del payload["tools"]
-            del payload["tool_choice"]
+            payload["tool_choice"] = "none"  # Prevent it from calling tools *again* in a loop
             
             final_response = requests.post(self.api_url, headers=headers, json=payload)
             if final_response.status_code == 200:
                 return final_response.json()["choices"][0]["message"]["content"]
             else:
+                print(f"[Generator] Groq API Final Error: {final_response.text}")
                 return "Failed to generate final response after fetching tool data."
                 
         else:
