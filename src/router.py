@@ -6,6 +6,7 @@ from config import config
 
 # ---------------------------------------------------------------------------
 # Router System Prompt
+# Instructs a small, fast LLM to classify the user's intent into a route.
 # ---------------------------------------------------------------------------
 ROUTER_SYSTEM_PROMPT = """
 You are an intent classifier for a Hokkaido disaster safety application.
@@ -67,7 +68,7 @@ class Router:
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
         self.api_key = config.GROQ_API_KEY
         # Use a smaller, cheaper, faster model for routing only
-        self.router_model = "llama3-8b-8192"
+        self.router_model = "openai/gpt-oss-20b"   # Smallest available model — fast & cheap for routing
 
     def classify(self, query: str, chat_history: list = None) -> dict:
         """
@@ -94,8 +95,8 @@ class Router:
                     "model": self.router_model,
                     "messages": messages,
                     "temperature": 0.0,
-                    "max_tokens": 120,
-                    # NOTE: response_format json_object is NOT supported by llama3-8b
+                    "max_tokens": 512,
+                    # NOTE: response_format json_object is NOT supported by all models
                     # We parse JSON manually from the raw text instead
                 },
                 timeout=10
@@ -136,7 +137,17 @@ class Router:
             return result
 
         except Exception as e:
-            print(f"[Router] Classification failed: {e}. Defaulting to 'rag'.")
+            print(f"[Router] Classification failed: {e}")
+            fallback_route = self._keyword_fallback(query)
+            if fallback_route:
+                print(f"[Router] System error. Keyword fallback → '{fallback_route}'")
+                return {
+                    "route": fallback_route,
+                    "confidence": 0.5,
+                    "reasoning": "Router error — rescued by keyword fallback."
+                }
+            
+            print("[Router] Defaulting to 'rag'.")
             return {
                 "route": "rag",
                 "confidence": 0.5,
