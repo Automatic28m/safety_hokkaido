@@ -39,6 +39,7 @@ class Config:
 
     # --- LLM Settings (Groq) ---
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+    METEOSOURCE_API_KEY = os.getenv("METEOSOURCE_API_KEY", "")
     # Switch model to bypass the rate limit on the previous model
     LLM_MODEL = "openai/gpt-oss-120b"
     
