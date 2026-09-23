@@ -74,51 +74,46 @@ class Generator:
             # when we pass no tools, causing "Tool choice is none, but model called a tool"
             payload["tool_choice"] = "none"
         
-        # Initial request to Groq with Tools and RAG context
-        response = requests.post(self.api_url, headers=headers, json=payload)
-        
-        if response.status_code != 200:
-            print(f"Groq API Error: {response.text}")
-            return "Sorry, I am having trouble connecting to my Groq AI brain right now."
+        # Agentic Tool Calling Loop (max 3 iterations)
+        for _ in range(3):
+            response = requests.post(self.api_url, headers=headers, json=payload)
+            
+            if response.status_code != 200:
+                print(f"[Generator] Groq API Error: {response.text}")
+                return "Sorry, I am having trouble connecting to my Groq AI brain right now."
 
-        response_data = response.json()
-        message = response_data["choices"][0]["message"]
-        
-        # If Groq decides it needs to call one or more tools
-        if "tool_calls" in message and message["tool_calls"]:
-            messages.append(message)
+            response_data = response.json()
+            message = response_data["choices"][0]["message"]
             
-            for tool_call in message["tool_calls"]:
-                func_name = tool_call["function"]["name"]
-                args = json.loads(tool_call["function"]["arguments"])
-                print(f"Tool Triggered! Executing: {func_name} with {args}")
+            if "tool_calls" in message and message["tool_calls"]:
+                messages.append(message)
                 
-                tool_result = ""
-                if func_name == "get_weather_for_city":
-                    tool_result = get_real_time_weather(args.get("city", "Sapporo"))
-                elif func_name == "get_disaster_warnings":
-                    tool_result = get_disaster_warnings(args.get("region", "Hokkaido"))
-                elif func_name == "check_train_status":
-                    tool_result = check_train_status(args.get("line_name", "All"))
+                for tool_call in message["tool_calls"]:
+                    func_name = tool_call["function"]["name"]
+                    args = json.loads(tool_call["function"]["arguments"])
+                    print(f"Tool Triggered! Executing: {func_name} with {args}")
                     
-                messages.append({
-                    "tool_call_id": tool_call["id"],
-                    "role": "tool",
-                    "name": func_name,
-                    "content": tool_result
-                })
-                    
-            # Send the final request back to Groq (which now contains RAG Rules + Real-Time Data)
-            payload["messages"] = messages
-            payload["tool_choice"] = "none"  # Prevent it from calling tools *again* in a loop
-            
-            final_response = requests.post(self.api_url, headers=headers, json=payload)
-            if final_response.status_code == 200:
-                return final_response.json()["choices"][0]["message"]["content"]
+                    tool_result = ""
+                    if func_name == "get_weather_for_city":
+                        tool_result = get_real_time_weather(args.get("city", "Sapporo"))
+                    elif func_name == "get_disaster_warnings":
+                        tool_result = get_disaster_warnings(args.get("region", "Hokkaido"))
+                    elif func_name == "check_train_status":
+                        tool_result = check_train_status(args.get("line_name", "All"))
+                        
+                    messages.append({
+                        "tool_call_id": tool_call["id"],
+                        "role": "tool",
+                        "name": func_name,
+                        "content": str(tool_result)
+                    })
+                
+                # Update payload with the new messages containing tool results
+                payload["messages"] = messages
+                # We do NOT set tool_choice="none" here, we allow the LLM to call another tool if needed
             else:
-                print(f"[Generator] Groq API Final Error: {final_response.text}")
-                return "Failed to generate final response after fetching tool data."
+                # No more tools called, this is the final answer!
+                return message.get("content", "")
                 
-        else:
-            # If no tools were needed, just return the standard RAG answer
-            return message.get("content", "")
+        return "Sorry, I took too long to gather all the live data. Please try asking a simpler question."
+
