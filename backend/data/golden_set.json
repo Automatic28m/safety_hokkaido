@@ -1,0 +1,38 @@
+[
+  {
+    "question": "I am in the ocean and there is a tsunami warning, what should I do?",
+    "language": "English",
+    "expected_chunk_ids": ["jnto_tsunami_advices.json_0_part_0"],
+    "notes": "Testing Tsunami specific advice."
+  },
+  {
+    "question": "ฉันอยู่ในทะเลและมีคำเตือนสึนามิ ฉันควรทำอย่างไร?",
+    "language": "Thai",
+    "expected_chunk_ids": ["jnto_tsunami_advices.json_0_part_0"],
+    "notes": "Testing Thai query translation and retrieval."
+  },
+  {
+    "question": "If I am in my hotel room and an earthquake happens, where should I take shelter?",
+    "language": "English",
+    "expected_chunk_ids": ["jnto_earthquake_advices.json_3_part_0"],
+    "notes": "Testing indoor earthquake advice."
+  },
+  {
+    "question": "ถ้าฉันอยู่ในห้องพักโรงแรมแล้วเกิดแผ่นดินไหว ฉันควรไปหลบที่ไหน?",
+    "language": "Thai",
+    "expected_chunk_ids": ["jnto_earthquake_advices.json_3_part_0"],
+    "notes": "Testing Thai query translation and retrieval."
+  },
+  {
+    "question": "What should I do if I am stuck in an elevator during an earthquake?",
+    "language": "English",
+    "expected_chunk_ids": ["jnto_earthquake_advices.json_6_part_0"],
+    "notes": "Testing elevator specific advice."
+  },
+  {
+    "question": "ฉันควรทำอย่างไรหากติดอยู่ในลิฟต์ระหว่างเกิดแผ่นดินไหว?",
+    "language": "Thai",
+    "expected_chunk_ids": ["jnto_earthquake_advices.json_6_part_0"],
+    "notes": "Testing Thai query translation and retrieval."
+  }
+]

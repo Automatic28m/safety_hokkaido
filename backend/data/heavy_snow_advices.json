@@ -1,0 +1,71 @@
+{
+  "When a Heavy Snow or Blizzard Warning is issued": [
+    {
+      "situation": "I am driving a vehicle",
+      "url": "https://www.hokkaido-travel-safety.jp/",
+      "advices": [
+        "Avoid non-essential driving. Driving in heavy snow is extremely dangerous and discouraged for visitors without winter driving experience.",
+        "Ensure your rental vehicle is equipped with studless winter tires and carry snow chains.",
+        "If visibility drops due to a whiteout, turn on your hazard lights, reduce speed, and pull over to a safe area or a 'Michi no Eki' (roadside rest area).",
+        "Look for the downward-pointing red arrow poles (snow poles) on the side of the road to know where the road boundaries are when lines are covered.",
+        "If your car gets stuck in the snow, contact emergency services and stay inside the vehicle unless a safe building is clearly visible nearby.",
+        "Crucial: Clear the snow around your car's exhaust pipe frequently. A blocked exhaust pipe will cause deadly carbon monoxide to fill the cabin.",
+        "Keep the engine off as much as possible while waiting for help. If you must run the heater, ventilate the car by opening windows slightly."
+      ]
+    },
+    {
+      "situation": "I am walking outside",
+      "url": "https://www.bousai.go.jp/1info/pdf/saigaipamphlet_je.pdf",
+      "advices": [
+        "Walk like a penguin with small, shuffling steps, keeping your center of gravity forward to avoid slipping on icy or packed snow surfaces.",
+        "Dress in layers. Wear thermal underwear, a windproof and waterproof outer jacket, gloves, and a hat that covers your ears.",
+        "Wear winter boots with deep treads. Consider buying attachable snow grips (spikes) for your shoes at local convenience stores.",
+        "Keep your hands out of your pockets to maintain balance and protect yourself if you fall. Use a backpack instead of carrying bags in your hands.",
+        "Be extremely cautious of snow sliding off roofs or sharp icicles falling from buildings above you, especially on sunny days following a blizzard.",
+        "If a severe blizzard or whiteout starts, visibility can drop to zero. Take shelter in the nearest sturdy building, convenience store, or station immediately."
+      ]
+    },
+    {
+      "situation": "I am using public transportation",
+      "url": "https://www.japan.travel/en/plan/emergencies/",
+      "advices": [
+        "Trains, Shinkansen (bullet trains), flights, and buses are highly likely to experience significant delays or cancellations during Heavy Snow warnings.",
+        "Always have a backup plan. Consider staying at an accommodation near the airport the night before a major flight.",
+        "Do not wait at unsheltered bus stops or open train platforms for long periods to avoid hypothermia.",
+        "Check real-time transit apps, airline websites, and JR English status pages before heading to the station or airport.",
+        "If stranded at a station or airport, remain calm, follow the instructions of the staff, and stay in designated heated waiting areas."
+      ]
+    },
+    {
+      "situation": "I am inside a building or accommodation",
+      "url": "https://www.jma.go.jp/jma/indexe.html",
+      "advices": [
+        "Stay indoors. Do not go outside to check the weather or take photos during a severe blizzard.",
+        "Prepare for possible power outages. Keep your mobile devices fully charged and keep flashlights and warm blankets accessible.",
+        "If the power goes out, wear layered clothing indoors to preserve body heat. Do NOT use outdoor charcoal grills or camp stoves indoors for heating, as this causes carbon monoxide poisoning.",
+        "Water pipes can freeze and burst in extreme cold. Follow your accommodation's instructions on leaving faucets dripping slightly at night to prevent freezing.",
+        "Keep emergency supplies such as drinking water, instant food, and basic first aid items stocked in your room."
+      ]
+    },
+    {
+      "situation": "Snow Removal Safety",
+      "url": "https://www.bousai.go.jp/en/",
+      "advices": [
+        "If you are staying at a rental house and need to clear snow, never work alone. Always clear snow in pairs or groups and only during the daylight.",
+        "Avoid risky tasks such as climbing onto the roof to remove snow unless you have proper safety gear, including a helmet and safety rope.",
+        "If using a mechanical snow blower and it gets jammed, ALWAYS turn off the engine completely before attempting to clear the snow from the chute with a stick.",
+        "Take frequent breaks while shoveling snow to avoid exhaustion or heart strain."
+      ]
+    },
+    {
+      "situation": "Preparing for a blizzard / Before going out",
+      "url": "https://www.jnto.go.jp/safety-tips/eng/index.html",
+      "advices": [
+        "Download the 'Safety tips' app provided by the Japan Tourism Agency to receive push notifications for Heavy Snow and Blizzard Warnings in multiple languages.",
+        "Monitor the Japan Meteorological Agency (JMA) website for color-coded weather warnings and snow depth analysis.",
+        "If authorities announce a 'once-in-a-few-years blizzard', cancel your outdoor plans and stay indoors, even if the weather appears calm at the moment.",
+        "Ensure you have enough cash on hand, as ATMs and card readers may stop working if power and communication lines are severed."
+      ]
+    }
+  ]
+}
