@@ -12,11 +12,6 @@ on:
   pull_request_review:
     types:
       - submitted
-  workflow_run:
-    workflows:
-      - Project checks
-    types:
-      - completed
 
 permissions:
   contents: read
@@ -51,22 +46,7 @@ jobs:
               { id: '08', path: '08_recommendation_feedback/', label: '08 Recommendation & Feedback' },
             ];
 
-            let pullRequest = context.payload.pull_request;
-
-            if (context.eventName === 'workflow_run') {
-              const relatedPullRequest = context.payload.workflow_run.pull_requests?.[0];
-
-              if (!relatedPullRequest) {
-                core.info('The CI run is not associated with a pull request.');
-                return;
-              }
-
-              pullRequest = (await github.rest.pulls.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: relatedPullRequest.number,
-              })).data;
-            }
+            const pullRequest = context.payload.pull_request;
 
             if (!['develop', 'main'].includes(pullRequest.base.ref)) {
               core.info(`PR #${pullRequest.number} does not target develop or main.`);
@@ -156,22 +136,7 @@ jobs:
 
             let notification;
 
-            if (context.eventName === 'workflow_run') {
-              const conclusion = context.payload.workflow_run.conclusion;
-
-              if (conclusion === 'success') {
-                notification = [
-                  '🟢 **CI checks passed**',
-                  `PR: ${pullRequest.title}`,
-                  `Checks: ${context.payload.workflow_run.name}`,
-                  `View checks: ${context.payload.workflow_run.html_url}`,
-                  `View PR: ${pullRequest.html_url}`,
-                ];
-              } else {
-                core.info(`CI conclusion ${conclusion || 'unknown'} does not require a Discord notification.`);
-                return;
-              }
-            } else if (context.eventName === 'pull_request_review') {
+            if (context.eventName === 'pull_request_review') {
               const review = context.payload.review;
 
               if (review.state === 'approved') {
