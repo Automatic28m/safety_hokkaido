@@ -38,7 +38,7 @@ def run_stage_1_mock_contract_test():
     print(f"Fetched:  {disaster_res.fetched_at}")
     print(f"Quakes:   {disaster_res.data['earthquakes']['count']} Hokkaido event(s) detected")
     print(f"Headline: {disaster_res.data['meteorological_warnings']['active_headline']}")
-    assert disaster_res.status in ["ok", "partial", "unavailable"], "Unexpected disaster status"
+    assert disaster_res.status in ["ok", "unavailable", "stale"], "Unexpected disaster status"
 
     # 3. Weather contract (missing config handling)
     orig_key = config.METEOSOURCE_API_KEY

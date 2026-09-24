@@ -45,9 +45,9 @@ class TestIntegration(unittest.TestCase):
         self.assertIsInstance(res, LiveDataSnapshot)
         self.assertEqual(res.provider, "jma")
         self.assertEqual(res.kind, "disaster")
-        self.assertIn(res.status, ["ok", "partial", "unavailable", "stale"])
+        self.assertIn(res.status, ["ok", "unavailable", "stale"])
         self.assertIsNotNone(res.fetched_at)
-        if res.status in ["ok", "partial"]:
+        if res.status == "ok" or (res.status == "unavailable" and res.data):
             self.assertIsNotNone(res.data)
             self.assertIn("earthquakes", res.data)
             self.assertIn("meteorological_warnings", res.data)
@@ -64,7 +64,7 @@ class TestIntegration(unittest.TestCase):
         # Hakodate maps to office 017000
         res = get_disaster_warnings("Hakodate")
         self.assertIsInstance(res, LiveDataSnapshot)
-        if res.status in ["ok", "partial"]:
+        if res.status == "ok" or (res.status == "unavailable" and res.data):
             warn = res.data["meteorological_warnings"]
             self.assertEqual(warn["office_code"], "017000")
 

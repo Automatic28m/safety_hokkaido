@@ -74,10 +74,11 @@ class TestAdapters(unittest.TestCase):
         mock_get.side_effect = [mock_quake, mock_warn]
 
         snapshot = fetch_disaster_warnings("Hokkaido")
-        self.assertEqual(snapshot.status, "partial")
+        self.assertEqual(snapshot.status, "unavailable")
         self.assertTrue(snapshot.data["earthquakes"]["is_available"])
         self.assertFalse(snapshot.data["meteorological_warnings"]["is_available"])
         self.assertIn("Weather warning feed unavailable", snapshot.notice)
+        self.assertIn("Earthquake data available", snapshot.notice)
 
     @patch("external_data.disaster.requests.get")
     def test_08_disaster_partial_when_quake_feed_fails(self, mock_get):
@@ -87,10 +88,11 @@ class TestAdapters(unittest.TestCase):
         mock_get.side_effect = [mock_quake, mock_warn]
 
         snapshot = fetch_disaster_warnings("Hokkaido")
-        self.assertEqual(snapshot.status, "partial")
+        self.assertEqual(snapshot.status, "unavailable")
         self.assertFalse(snapshot.data["earthquakes"]["is_available"])
         self.assertTrue(snapshot.data["meteorological_warnings"]["is_available"])
         self.assertIn("Earthquake feed unavailable", snapshot.notice)
+        self.assertIn("Weather warnings available", snapshot.notice)
 
     @patch("external_data.disaster.requests.get")
     def test_09_disaster_unavailable_on_timeout(self, mock_get):

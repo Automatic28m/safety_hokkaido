@@ -183,13 +183,20 @@ def fetch_disaster_warnings(region: str = "Hokkaido") -> LiveDataSnapshot:
             source_url=JMA_QUAKE_SOURCE
         )
 
-    # Determine status: ok if both succeed, partial if one fails
-    status = "ok" if (quake_ok and warning_ok) else "partial"
+    # Determine status: ok if both succeed, unavailable if at least one fails
+    if quake_ok and warning_ok:
+        status = "ok"
+    else:
+        # At least one provider failed -> treat as unavailable
+        status = "unavailable"
+
     notices = []
-    if not quake_ok:
-        notices.append(f"Earthquake feed unavailable ({quake_err})")
-    if not warning_ok:
+    if quake_ok and not warning_ok:
+        notices.append("Earthquake data available")
         notices.append(f"Weather warning feed unavailable ({warning_err})")
+    elif not quake_ok and warning_ok:
+        notices.append("Weather warnings available")
+        notices.append(f"Earthquake feed unavailable ({quake_err})")
 
     normalized_data = {
         "region_scope": valid_region,
@@ -221,4 +228,6 @@ def fetch_disaster_warnings(region: str = "Hokkaido") -> LiveDataSnapshot:
         notice=notice_str
     )
 
-    return global_cache.set(snapshot, ttl_seconds=DEFAULT_DISASTER_TTL)
+    if status == "ok":
+        return global_cache.set(snapshot, ttl_seconds=DEFAULT_DISASTER_TTL)
+    return snapshot
