@@ -1,0 +1,60 @@
+name: AI Code Reviewer
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  ai_review:
+    name: Run AI Architecture Review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # We need full history to get the diff
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Get PR Diff
+        id: get_diff
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          # Get the diff between the target branch (develop) and the PR branch
+          DIFF=$(git diff origin/${{ github.event.pull_request.base.ref }}...HEAD)
+          
+          # Use EOF to handle multi-line diffs in GITHUB_ENV safely
+          echo "PR_DIFF<<EOF" >> $GITHUB_ENV
+          echo "$DIFF" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Run AI Reviewer Script
+        env:
+          # This pulls the secret from your GitHub Repository Secrets
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python .github/scripts/ai_pr_reviewer.py
+
+      - name: Comment on PR
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('review_output.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "🤖 **Safety Hokkaido AI Architect Review:**\n\n" + review
+            })
