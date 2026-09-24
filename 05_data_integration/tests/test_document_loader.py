@@ -55,7 +55,6 @@ def sample_corpus(tmp_path):
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
     writer.add_blank_page(width=200, height=200)
-    # pypdf blank pages don't have text streams, so we can test page reading without errors
     with open(pdf_path, "wb") as f:
         writer.write(f)
 
@@ -84,6 +83,7 @@ def test_json_loading_and_metadata(sample_corpus):
         assert c["metadata"]["source_version"] != ""
         assert c["metadata"]["reviewed_at"] != ""
         assert c["metadata"]["page"] is None
+        assert c["metadata"]["page_number"] is None
 
 
 def test_stable_chunk_id_determinism(sample_corpus):
@@ -129,3 +129,24 @@ def test_handles_null_fields_in_json(tmp_path):
     assert chunks[0]["metadata"]["situation"] == "General"
     assert chunks[0]["metadata"]["url"] == "Local Document"
     assert "Valid advice" in chunks[0]["text"]
+
+
+def test_chunk_schema_stability(sample_corpus):
+    """
+    Guards against accidental schema drift: ensures all chunks contain
+    'text' and 'metadata' with source_file, category, situation, url,
+    source_version, and reviewed_at.
+    """
+    chunks = load_all_data(sample_corpus)
+    assert len(chunks) > 0
+
+    required_top_level = {"chunk_id", "text", "metadata"}
+    required_metadata = {"source_file", "category", "situation", "url", "source_version", "reviewed_at"}
+
+    for chunk in chunks:
+        assert required_top_level.issubset(chunk.keys()), f"Missing top-level keys in {chunk}"
+        assert isinstance(chunk["text"], str) and len(chunk["text"]) > 0
+        meta = chunk["metadata"]
+        assert required_metadata.issubset(meta.keys()), f"Missing metadata keys in {meta}"
+        assert "page" in meta
+        assert "page_number" in meta
