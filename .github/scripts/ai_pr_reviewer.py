@@ -8,6 +8,10 @@ def main():
     if not diff:
         print("No PR diff provided.")
         return
+        
+    # Truncate diff to max 12000 chars (approx 3000-4000 tokens) to prevent rate limits
+    if len(diff) > 12000:
+        diff = diff[:12000] + "\n...[DIFF TRUNCATED DUE TO TOKEN LIMITS]..."
 
     groq_api_key = os.getenv("GROQ_API_KEY")
     if not groq_api_key:
