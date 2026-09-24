@@ -43,7 +43,7 @@ Provide a concise, constructive review.
 """
 
     payload = {
-        "model": "llama3-70b-8192",
+        "model": "llama-3.1-70b-versatile",
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Here is the PR diff:\n\n```diff\n{diff}\n```"}
