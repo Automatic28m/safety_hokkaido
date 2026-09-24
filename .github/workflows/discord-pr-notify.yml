@@ -1,0 +1,142 @@
+name: Discord PR notifications
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, reopened, closed]
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: [Project checks]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send notifications for affected modules
+        uses: actions/github-script@v7
+        env:
+          DISCORD_WEBHOOK_01: ${{ secrets.DISCORD_WEBHOOK_01 }}
+          DISCORD_WEBHOOK_02: ${{ secrets.DISCORD_WEBHOOK_02 }}
+          DISCORD_WEBHOOK_03: ${{ secrets.DISCORD_WEBHOOK_03 }}
+          DISCORD_WEBHOOK_04: ${{ secrets.DISCORD_WEBHOOK_04 }}
+          DISCORD_WEBHOOK_05: ${{ secrets.DISCORD_WEBHOOK_05 }}
+          DISCORD_WEBHOOK_06: ${{ secrets.DISCORD_WEBHOOK_06 }}
+          DISCORD_WEBHOOK_07: ${{ secrets.DISCORD_WEBHOOK_07 }}
+          DISCORD_WEBHOOK_08: ${{ secrets.DISCORD_WEBHOOK_08 }}
+        with:
+          script: |
+            const modules = [
+              { id: '01', path: '01_web_app/', label: '01 Web App' },
+              { id: '02', path: '02_api_backend/', label: '02 API / Backend' },
+              { id: '03', path: '03_travel_ai_agent/', label: '03 Travel AI Agent' },
+              { id: '04', path: '04_external_data_services/', label: '04 External Data Services' },
+              { id: '05', path: '05_data_integration/', label: '05 Data Integration' },
+              { id: '06', path: '06_risk_knowledge_services/', label: '06 Risk & Knowledge Services' },
+              { id: '07', path: '07_decision_llm_engine/', label: '07 Decision & LLM Engine' },
+              { id: '08', path: '08_recommendation_feedback/', label: '08 Recommendation & Feedback' },
+            ];
+
+            let pullRequest = context.payload.pull_request;
+
+            if (context.eventName === 'workflow_run') {
+              const relatedPullRequest = context.payload.workflow_run.pull_requests?.[0];
+              if (!relatedPullRequest) return;
+              pullRequest = (await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: relatedPullRequest.number,
+              })).data;
+            }
+
+            if (!['develop', 'main'].includes(pullRequest.base.ref)) return;
+
+            const changedFiles = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullRequest.number,
+              per_page: 100,
+            });
+            const affectedModules = modules.filter((module) =>
+              changedFiles.some((file) => file.filename.startsWith(module.path))
+            );
+            if (affectedModules.length === 0) return;
+
+            let notification;
+            if (context.eventName === 'workflow_run') {
+              if (context.payload.workflow_run.conclusion !== 'success') return;
+              notification = [
+                '🟢 **CI checks passed**',
+                `PR: ${pullRequest.title}`,
+                `View checks: ${context.payload.workflow_run.html_url}`,
+                `View PR: ${pullRequest.html_url}`,
+              ];
+            } else if (context.eventName === 'pull_request_review') {
+              const review = context.payload.review;
+              if (review.state === 'approved') {
+                notification = [
+                  '🟢 **PR approved**',
+                  `PR: ${pullRequest.title}`,
+                  `Reviewer: ${review.user.login}`,
+                  pullRequest.html_url,
+                ];
+              } else if (review.state === 'changes_requested') {
+                const rawReason = review.body?.trim() || 'No reason was provided by the reviewer.';
+                const reason = rawReason.length > 1200 ? `${rawReason.slice(0, 1200)}…` : rawReason;
+                notification = [
+                  '🔴 **Changes requested**',
+                  `PR: ${pullRequest.title}`,
+                  `Reviewer: ${review.user.login}`,
+                  `Reason: ${reason}`,
+                  pullRequest.html_url,
+                ];
+              } else {
+                return;
+              }
+            } else if (context.payload.action === 'closed') {
+              notification = pullRequest.merged
+                ? [
+                    '✅ **PR merged**',
+                    `PR: ${pullRequest.title}`,
+                    `Merged by: ${pullRequest.merged_by?.login || 'Unknown'}`,
+                    `Target branch: ${pullRequest.base.ref}`,
+                    pullRequest.html_url,
+                  ]
+                : [
+                    '⚪ **PR closed without merge**',
+                    `PR: ${pullRequest.title}`,
+                    `Closed by: ${pullRequest.user.login}`,
+                    pullRequest.html_url,
+                  ];
+            } else {
+              const label = context.payload.action === 'reopened' ? 'PR reopened' : 'New PR';
+              notification = [
+                `🔔 **${label}: ${pullRequest.title}**`,
+                `Opened by: ${pullRequest.user.login}`,
+                `Branch: \`${pullRequest.head.ref}\` → \`${pullRequest.base.ref}\``,
+                `Affected modules: ${affectedModules.map((module) => module.label).join(', ')}`,
+                pullRequest.html_url,
+              ];
+            }
+
+            const content = notification.join('\n');
+            for (const module of affectedModules) {
+              const webhookUrl = process.env[`DISCORD_WEBHOOK_${module.id}`];
+              if (!webhookUrl) {
+                core.warning(`DISCORD_WEBHOOK_${module.id} is not configured.`);
+                continue;
+              }
+              const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content }),
+              });
+              if (!response.ok) {
+                throw new Error(`Discord notification for ${module.label} failed: ${response.status}`);
+              }
+            }
