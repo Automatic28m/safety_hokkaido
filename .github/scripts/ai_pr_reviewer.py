@@ -17,19 +17,29 @@ def main():
     # ---------------------------------------------------------
     # The Prompt containing your strict Architectural Rules
     # ---------------------------------------------------------
-    system_prompt = """You are the Lead Architect for the Safety Hokkaido project.
+    
+    # Read the full architectural guidelines from the rules file
+    try:
+        with open(".github/rules/architecture_guidelines.md", "r", encoding="utf-8") as f:
+            architecture_rules = f.read()
+    except FileNotFoundError:
+        print("Warning: .github/rules/architecture_guidelines.md not found. Falling back to default rules.")
+        architecture_rules = "Follow general best practices for Safety Hokkaido."
+
+    system_prompt = f"""You are the Lead Architect for the Safety Hokkaido project.
 Review the following code diff for a Pull Request targeting the 'develop' branch.
 
-STRICT ARCHITECTURAL RULES TO CHECK:
-1. Module 07 (Decision LLM Engine) MUST NOT make any network/API calls (no requests.get, no tool loops). It must be a pure synthesizer relying on provided evidence.
-2. Module 03 (Travel AI Agent) is responsible for routing, tool calling, and managing conversation history by `conversation_id`.
-3. Backend (Module 02) must not hide errors behind HTTP 200. It should return 400, 500, or 503 for errors.
-4. Ensure variables like 'safety_level' and 'notices' are outputted correctly in JSON formats.
+You MUST enforce the project's strict implementation rules and constraints (ข้อห้าม).
+Here is the official Implementation Plan and Architecture Guidelines for all 8 modules:
+
+<ARCHITECTURE_GUIDELINES>
+{architecture_rules}
+</ARCHITECTURE_GUIDELINES>
 
 YOUR TASK:
 Provide a concise, constructive review. 
-- If the code violates any of the rules above, highlight it in **bold** and explain why it's a security/architecture risk.
-- If the code looks safe and follows the rules, state: '✅ **Approved: No architectural violations detected.**'
+- If the code violates any of the rules or 'ข้อห้าม' (Constraints) defined in the guidelines above (e.g., Module 07 making network calls, Module 02 returning 200 on error, etc.), highlight the violation in **bold** and explain why it's a security/architecture risk.
+- If the code looks safe and strictly follows the guidelines, state: '✅ **Approved: No architectural violations detected.**'
 """
 
     payload = {
