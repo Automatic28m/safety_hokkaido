@@ -63,7 +63,7 @@ Provide a concise, constructive review.
         review = response.json()["choices"][0]["message"]["content"]
         
         # Write to a file so GitHub Actions can read it and post it as a comment
-        with open("review_output.md", "w") as f:
+        with open("review_output.md", "w", encoding="utf-8") as f:
             f.write(review)
         print("Review successfully generated.")
     else:

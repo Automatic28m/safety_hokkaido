@@ -41,20 +41,25 @@ jobs:
 
       - name: Run AI Reviewer Script
         env:
-          # This pulls the secret from your GitHub Repository Secrets
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python .github/scripts/ai_pr_reviewer.py
 
-      - name: Comment on PR
+      - name: Submit Formal PR Review
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const review = fs.readFileSync('review_output.md', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            const reviewText = fs.readFileSync('review_output.md', 'utf8');
+            
+            // Determine if the AI approved it based on the expected phrase
+            const isApproved = reviewText.includes('✅ **Approved:');
+            const eventType = isApproved ? 'APPROVE' : 'REQUEST_CHANGES';
+            
+            await github.rest.pulls.createReview({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "🤖 **Safety Hokkaido AI Architect Review:**\n\n" + review
-            })
+              pull_number: context.issue.number,
+              body: "🤖 **Safety Hokkaido AI Architect Review:**\n\n" + reviewText,
+              event: eventType
+            });
