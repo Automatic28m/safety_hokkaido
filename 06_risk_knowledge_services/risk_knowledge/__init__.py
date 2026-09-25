@@ -10,6 +10,7 @@ from .models import (
     RouteInfo,
     RiskKnowledgeResponse,
 )
+from .risk_model import LocalRiskModel
 
 __all__ = [
     "RiskLevel",
@@ -20,4 +21,5 @@ __all__ = [
     "RiskAssessment",
     "RouteInfo",
     "RiskKnowledgeResponse",
+    "LocalRiskModel",
 ]
