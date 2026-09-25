@@ -30,12 +30,27 @@
 ### 1.4 ปรับปรุงเอกสารสัญญาระบบ (`01_env.md`, `02_step.md`, `03_process.md`)
 * อัปเดตข้อกำหนดทางสถาปัตยกรรม กฎความปลอดภัย ห้ามฟันธงการกระทำแทนผู้ใช้ และข้อห้ามเรื่องลายน้ำ AI
 
-### 1.5 สร้างชุดทดสอบอัตโนมัติครอบคลุม 100% (`tests/`)
-* สร้างไฟล์ทดสอบ 3 ชุด:
+### 1.5 พัฒนา Local Risk Model Engine (`risk_model.py`)
+* **Multi-Factor Risk Scoring:**
+  * คำนวณคะแนนความเสี่ยงถ่วงน้ำหนัก ($S_{\text{risk}} = 0.45 \times S_{\text{disaster}} + 0.35 \times S_{\text{weather}} + 0.20 \times S_{\text{transit}}$)
+  * **Disaster Sub-model:** วิเคราะห์ระดับแรงสั่นสะเทือนแผ่นดินไหว JMA Shindo (สเกล 1 ถึง 7, 5弱/5強, 6弱/6強) และประกาศเตือนภัยฉุกเฉิน (Tsunami, Blizzard Warning, Heavy Snow Warning, Landslide)
+  * **Weather Sub-model:** ประเมินความเร็วลม (เกณฑ์พายุหิมะ Whiteout $\ge 20\text{ m/s}$), ปริมาณหิมะตกสะสม, อุณหภูมิหนาวจัด ($\le -15^\circ\text{C}$ เสี่ยง Hypothermia)
+  * **Transit Sub-model:** ตรวจสอบสถานะสายรถไฟ JR และโครงข่ายถนน (Suspended, Delayed, Normal) พร้อมระบุจุดปิดกั้นเส้นทาง (`closed_segments`)
+* **Fail-Safe Emergency Override:**
+  * หากเกิดเหตุวิกฤต เช่น สึนามิ, แผ่นดินไหวรุนแรง Shindo $\ge 5$, หรือพายุหิมะ Whiteout ลมแรง ระบบจะรับประกันระดับความเสี่ยงขั้นต่ำที่ `HIGH` ($\ge 0.70$) ทันที ไม่ถูกเฉลี่ยลดทอนลง
+* **Fail Conservatively & Dynamic Re-weighting:**
+  * หาก Data Feed บางส่วนขาดหาย จะคำนวณและปรับสัดส่วนน้ำหนักใหม่เฉพาะ Feed ที่ใช้งานได้ พร้อมแนบ Notice แจ้งเตือนอย่างโปร่งใส
+  * หาก Data Feeds ทั้งหมดใช้งานไม่ได้ จะคืนค่า `RiskLevel.UNKNOWN` พร้อมแจ้งเตือนความปลอดภัยทันที
+* **Route Evaluation (`RouteInfo`):**
+  * คัดกรองและแนะนำเส้นทางปลอดภัย (`recommended_route`), เส้นทางเลี่ยงสำรอง (`alternative_routes`), และบันทึกจุดที่ถูกระงับ/ปิดกั้น (`closed_segments`)
+
+### 1.6 สร้างชุดทดสอบอัตโนมัติครอบคลุม 100% (`tests/`)
+* สร้างและขยายไฟล์ทดสอบ 4 ชุด:
   * `test_models.py` (8 Test Cases)
   * `test_hybrid_retriever.py` (4 Test Cases)
   * `test_rerankers.py` (3 Test Cases)
-* **ผลการทดสอบ: ผ่าน 15 จาก 15 Test Cases (100% Pass)**
+  * `test_risk_model.py` (8 Test Cases)
+* **ผลการทดสอบ: ผ่านครบ 23 จาก 23 Test Cases (100% Pass)**
 
 ---
 
@@ -47,14 +62,20 @@
 | **2. ความเสี่ยงแครชเมื่อขาด Index** | ถ้าไฟล์ `document.index` หรือ `bm25_index.pkl` ไม่มีอยู่ โค้ดเดิมจะ Exception ล่มทันที | ดักจับ Exception ใน `_load_indices()` และคืนสถานะ `degraded=True` อย่างปลอดภัย |
 | **3. บั๊ก Dictionary Subscript** | โค้ดภายนอก (Node 03/07) เรียก `c['text']` และ `c['metadata']` ซึ่ง Pydantic ปกติไม่รองรับ | เพิ่มเมธอด `__getitem__`, `__contains__`, และ `get()` ใน Model ให้ทำหน้าที่เป็น Transparent Proxy |
 | **4. ผลการจัดอันดับไม่มี Score** | โค้ดเดิมตัด score ทิ้งหลังจาก sort เหลือแค่ chunk ดิบ | คงค่า `score` และ `rank` ไว้ใน `RetrievalResultItem` เพื่อใช้วิเคราะห์และตรวจสอบย้อนหลัง |
+| **5. Cross-module Dependency ในการทดสอบ** | การทดสอบกับโมเดล `LiveDataSnapshot` ของโมดูล 04 เรียกหา `config` และ `requests` | จัดการโครงสร้าง `sys.path` ให้รองรับทั้งการรันเดี่ยวและการรันแบบ Cross-Module อย่างสมบูรณ์ |
 
 ---
 
 ## 📊 3. ผลการทดสอบอัตโนมัติ (Automated Test Results)
 
 ```bash
-Ran 15 tests in 84.925s
+Ran 23 tests in 41.688s
 
 OK
 ```
-ทุกชุดทดสอบผ่านเรียบร้อยสมบูรณ์ 100%
+* `test_models.py` (8 Tests) — ผ่าน 100%
+* `test_hybrid_retriever.py` (4 Tests) — ผ่าน 100%
+* `test_rerankers.py` (3 Tests) — ผ่าน 100%
+* `test_risk_model.py` (8 Tests) — ผ่าน 100%
+
+**รวมทั้งสิ้น 23 จาก 23 Tests ผ่านเรียบร้อยสมบูรณ์ (100% Pass Rate)**
