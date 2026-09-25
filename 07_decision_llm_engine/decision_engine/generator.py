@@ -1,7 +1,10 @@
-import requests
 import json
-import os
-from config import config  # Inheriting global settings (like GROQ_API_KEY) from the root config
+import re
+from typing import List, Optional
+try:
+    from pydantic import BaseModel, ValidationError
+except ImportError:
+    BaseModel = object
 
 # Module 07 Owns Its Prompt (Decoupled from Node 02)
 DECISION_SYSTEM_PROMPT = """You are Tamago, a friendly, warm, and helpful female AI guide for Hokkaido tourists. 
@@ -28,34 +31,30 @@ Context (Evidence & Live Data):
 {context}
 """
 
+class DecisionResponse(BaseModel if BaseModel is not object else object):
+    reply: str
+    safety_level: str
+    used_evidence_ids: List[str]
+    used_live_sources: List[str]
+    degraded: bool
+    notices: List[str]
+
 class Generator:
-    def __init__(self):
-        self.api_key = config.GROQ_API_KEY
-        self.api_url = "https://api.groq.com/openai/v1/chat/completions"
-        self.model = config.LLM_MODEL
-
-    def generate(self, original_query, history=None, evidence=None, live_data=None, tool_policy=None, language="th"):
+    """
+    Node 07: Controlled Synthesizer.
+    Purely functional module. Does NOT make network calls.
+    """
+    
+    def format_prompt(self, original_query: str, history=None, evidence=None, live_data=None, tool_policy=None, language="th") -> list:
         """
-        Node 07: Controlled Synthesizer.
-        Takes pre-fetched evidence and live_data (from Node 03) and generates a structured JSON decision.
+        Formats the strict prompt and context block. 
+        Returns the messages array ready to be sent to the LLM by the orchestration layer.
         """
-        if not config.USE_LLM:
-            return {
-                "reply": "DEBUG MODE (LLM OFF)",
-                "safety_level": "unknown",
-                "used_evidence_ids": [],
-                "used_live_sources": [],
-                "degraded": True,
-                "notices": ["LLM is disabled in config."]
-            }
-
         evidence = evidence or []
         live_data = live_data or []
         history = history or []
 
-        # 1. Format the provided Context
         context_blocks = []
-        
         if evidence:
             context_blocks.append("--- VERIFIED EVIDENCE ---")
             for chunk in evidence:
@@ -73,12 +72,9 @@ class Generator:
 
         context_str = "\n\n".join(context_blocks) if context_blocks else "No evidence or live data provided."
         
-        # 2. Build the strict System Prompt using Module 07's isolated prompt
         system_prompt = DECISION_SYSTEM_PROMPT.replace("{context}", context_str).replace("{language}", language)
-        
         messages = [{"role": "system", "content": system_prompt}]
         
-        # 3. Append User History
         recent_history = history[-6:]
         for msg in recent_history:
             role = "assistant" if msg["role"] == "ai" else msg["role"]
@@ -86,52 +82,52 @@ class Generator:
         
         messages.append({"role": "user", "content": original_query})
         
-        # 4. Prepare the Payload for Groq (Enforcing JSON Mode)
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": 0.1,  # Low temperature for strict adherence to guardrails
-            "max_tokens": 1024,
-            "response_format": {"type": "json_object"}
-        }
+        return messages
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        # 5. Make a SINGLE call to the LLM (No tool execution!)
+    def parse_llm_response(self, json_str: str) -> dict:
+        """
+        Parses the JSON returned by the LLM, validates the schema, and sanitizes HTML.
+        """
         try:
-            response = requests.post(self.api_url, headers=headers, json=payload, timeout=15)
+            # 1. Parse JSON
+            decision_dict = json.loads(json_str)
             
-            if response.status_code != 200:
-                print(f"[Generator] Groq API Error: {response.text}")
-                return self._fallback_response("Groq API returned an error.")
-                
-            response_data = response.json()
-            json_str = response_data["choices"][0]["message"]["content"]
+            # 2. Strict Schema Validation (fallback to manual if pydantic missing)
+            if BaseModel is not object:
+                decision = DecisionResponse(**decision_dict)
+                reply = decision.reply
+                safety_level = decision.safety_level
+                used_evidence_ids = decision.used_evidence_ids
+                used_live_sources = decision.used_live_sources
+                degraded = decision.degraded
+                notices = decision.notices
+            else:
+                reply = str(decision_dict.get("reply", ""))
+                safety_level = str(decision_dict.get("safety_level", "unknown"))
+                used_evidence_ids = list(decision_dict.get("used_evidence_ids", []))
+                used_live_sources = list(decision_dict.get("used_live_sources", []))
+                degraded = bool(decision_dict.get("degraded", False))
+                notices = list(decision_dict.get("notices", []))
             
-            # 6. Parse and validate the JSON output
-            decision = json.loads(json_str)
+            # 3. HTML/JS Sanitization (Strip tags)
+            safe_reply = re.sub(r'<[^>]+>', '', reply)
             
-            # Ensure all contract fields are present
             return {
-                "reply": decision.get("reply", "No reply generated."),
-                "safety_level": decision.get("safety_level", "unknown"),
-                "used_evidence_ids": decision.get("used_evidence_ids", []),
-                "used_live_sources": decision.get("used_live_sources", []),
-                "degraded": decision.get("degraded", False),
-                "notices": decision.get("notices", [])
+                "reply": safe_reply,
+                "safety_level": safety_level,
+                "used_evidence_ids": used_evidence_ids,
+                "used_live_sources": used_live_sources,
+                "degraded": degraded,
+                "notices": notices
             }
             
-        except json.JSONDecodeError:
-            print("[Generator] LLM failed to output valid JSON.")
-            return self._fallback_response("LLM hallucinated invalid JSON.")
-        except requests.exceptions.RequestException as e:
-            print(f"[Generator] Network error calling Groq: {e}")
-            return self._fallback_response("Network timeout calling Groq API.")
-            
-    def _fallback_response(self, reason):
+        except Exception as e:
+            return self.get_fallback_response(f"Validation or parsing failed: {str(e)}")
+
+    def get_fallback_response(self, reason: str) -> dict:
+        """
+        Guarantees a safe fallback dictionary if anything goes wrong.
+        """
         return {
             "reply": "I am experiencing technical difficulties and cannot safely process your request at this moment. If you are in an emergency, please contact 119 or 110 immediately.",
             "safety_level": "unknown",
