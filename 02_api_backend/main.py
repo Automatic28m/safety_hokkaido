@@ -15,7 +15,7 @@ logger = logging.getLogger("api_backend")
 
 import uvicorn
 
-from agent_core.memory import global_memory
+from agent_core.context_manager import memory_store
 from agent_core.pipeline import RAGPipeline
 from api.app import create_app
 
@@ -30,7 +30,7 @@ def get_pipeline():
     return pipeline
 
 
-app = create_app(get_pipeline=get_pipeline, reset_memory=global_memory.clear)
+app = create_app(get_pipeline=get_pipeline, reset_memory=memory_store.clear_all)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

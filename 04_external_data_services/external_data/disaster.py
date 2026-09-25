@@ -27,6 +27,10 @@ HOKKAIDO_OFFICES = {
 
 import re
 
+# Result tuples: (ok, payload, error_message); defined before first use.
+Tuple_Quake_Result = Any
+Tuple_Warning_Result = Any
+
 HOKKAIDO_JA_KEYWORDS = [
     "北海道", "十勝", "石狩", "渡島", "檜山", "後志", "空知", "上川",
     "留萌", "宗谷", "オホーツク", "網走", "北見", "紋別", "胆振", "日高",
@@ -101,8 +105,6 @@ def _fetch_office_warnings(office_code: str) -> Tuple_Warning_Result:
     }, None
 
 
-Tuple_Quake_Result = Any
-Tuple_Warning_Result = Any
 
 
 def fetch_disaster_warnings(region: str = "Hokkaido") -> LiveDataSnapshot:

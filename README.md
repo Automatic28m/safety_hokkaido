@@ -16,7 +16,7 @@ Safety Hokkaido is an AI travel-safety assistant for Hokkaido. It combines a mul
 |---|---|---|
 | `01_web_app` | Traveler-facing UI, localization, chat client | Next.js application |
 | `02_api_backend` | HTTP API, validation, CORS, service startup | FastAPI `main.py` |
-| `03_travel_ai_agent` | Intent routing and orchestration | `src/router.py`, `src/rag_pipeline.py` |
+| `03_travel_ai_agent` | Intent routing, tool selection and orchestration | `agent_core/main.py`, `classifier.py`, `planner.py`, `tools.py`, `guardrails.py`, `context_manager.py` |
 | `04_external_data_services` | Weather, disaster and rail adapters | `src/tools.py` |
 | `05_data_integration` | Loading, splitting, embeddings and indices | `document_loader`, `text_splitter`, `embedding_model`, `vector_store` |
 | `06_risk_knowledge_services` | Hybrid retrieval, reranking and verified safety corpus | `hybrid_retriever`, `rerankers`, `data/` |
