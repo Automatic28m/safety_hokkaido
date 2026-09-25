@@ -97,7 +97,7 @@ export default function ChatBot({ isOpen, onClose }) {
         aria-hidden="true"
       />
       
-      <div className="fixed top-6 bottom-8 left-[5%] right-[5%] sm:top-auto sm:left-auto sm:bottom-4 sm:right-4 sm:w-[400px] sm:h-[85vh] bg-white rounded-3xl shadow-2xl z-[100] flex flex-col overflow-hidden">
+      <div className="fixed top-6 bottom-8 left-[5%] right-[5%] sm:top-1/2 sm:left-1/2 sm:bottom-auto sm:right-auto sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[90vw] sm:max-w-5xl sm:h-[90vh] bg-white rounded-3xl shadow-2xl z-[100] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-b from-[#0c59cc] to-[#1bb38e] pt-6 pb-5 px-6 flex items-center justify-between relative shrink-0 shadow-md z-10">
         

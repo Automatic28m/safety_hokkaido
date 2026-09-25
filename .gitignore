@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Environments
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Vector DB & Build
+vector_db/
+build/
+dist/
+*.egg-info/
+
+# Logs & temp
+outputs/
+*.log
+.DS_Store
+.vscode/
+.idea/

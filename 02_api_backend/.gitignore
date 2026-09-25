@@ -30,3 +30,9 @@ outputs/
 # IDE
 .vscode/
 .idea/
+
+# Keep the example env file even though .env* is ignored above
+!.env.example
+
+# Test cache
+.pytest_cache/
