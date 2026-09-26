@@ -3,9 +3,18 @@ import requests
 import json
 import sys
 
+def load_diff():
+    """Reads the diff from PR_DIFF_FILE (preferred) or the legacy PR_DIFF variable."""
+    diff_file = os.getenv("PR_DIFF_FILE")
+    if diff_file and os.path.exists(diff_file):
+        with open(diff_file, "r", encoding="utf-8", errors="replace") as f:
+            return f.read()
+    return os.getenv("PR_DIFF")
+
+
 def main():
-    diff = os.getenv("PR_DIFF")
-    if not diff:
+    diff = load_diff()
+    if not diff or not diff.strip():
         print("No PR diff provided.")
         return
         
