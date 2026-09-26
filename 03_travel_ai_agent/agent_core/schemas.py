@@ -95,7 +95,9 @@ class RouteDecision(BaseModel):
     reasoning: str = ""
     fallback_used: bool = False
     source: str = "llm"  # llm | keyword | default
-    tool_hints: List[str] = Field(default_factory=list)
+    # None = the classifier could not tell which live tools apply (planner queries all
+    # permitted tools); a list = only these tools are needed.
+    tool_hints: Optional[List[str]] = None
 
     @field_validator("route")
     @classmethod
@@ -106,7 +108,9 @@ class RouteDecision(BaseModel):
 
     @field_validator("tool_hints")
     @classmethod
-    def _hints_known(cls, value: List[str]) -> List[str]:
+    def _hints_known(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+        if value is None:
+            return None
         return [hint for hint in value if hint in TOOL_NAMES]
 
     @property

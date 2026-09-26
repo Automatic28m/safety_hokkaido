@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 
 from agent_core.llm_client import LLMClientError, extract_json_object
 from agent_core.schemas import ROUTES, TOOL_NAMES, RouteDecision
+from agent_core.settings import config_value, provider_ready
 
 logger = logging.getLogger("travel_ai_agent")
 
@@ -34,7 +35,8 @@ Available routes:
 - "realtime"     -> Needs live data only: current weather, active earthquake alerts, live train status.
 - "rag+realtime" -> Needs BOTH safety guidance AND live data (e.g. "Is it safe to drive to Otaru right now?").
 
-Also list which live tools would help, from: "weather", "disaster", "train". Leave the list empty when none apply.
+Also list which live tools are needed, from: "weather", "disaster", "train".
+For "realtime" and "rag+realtime" name at least one tool; for other routes use an empty list.
 
 Reply with ONLY valid JSON, no markdown, no explanation:
 { "route": "<route>", "confidence": <0.0-1.0>, "reasoning": "<brief reason>", "tools": ["weather"] }
@@ -42,8 +44,8 @@ Reply with ONLY valid JSON, no markdown, no explanation:
 
 KEYWORD_RULES: Dict[str, List[str]] = {
     "realtime": [
-        "right now", "currently", "today", "tonight", "at the moment", "live",
-        "weather", "raining", "snowing", "temperature", "forecast", "wind",
+        "right now", "currently", "today", "tonight", "at the moment", "live data",
+        "weather", "raining", "snowing", "temperature", "forecast", "wind", "windy",
         "train", "delay", "delayed", "cancelled", "running", "jr",
         "earthquake now", "warning now", "alert now", "is it safe now",
         "ตอนนี้", "วันนี้", "คืนนี้", "อากาศ", "หิมะตก", "ฝนตก", "อุณหภูมิ", "พยากรณ์",
@@ -63,8 +65,8 @@ KEYWORD_RULES: Dict[str, List[str]] = {
 
 TOOL_KEYWORDS: Dict[str, List[str]] = {
     "weather": [
-        "weather", "snow", "rain", "temperature", "forecast", "wind", "cold", "storm",
-        "drive", "driving", "road", "visibility",
+        "weather", "snow", "snowing", "snowfall", "snowy", "rain", "raining", "temperature",
+        "forecast", "wind", "windy", "cold", "storm", "drive", "driving", "road", "roads", "visibility",
         "อากาศ", "หิมะ", "ฝน", "อุณหภูมิ", "ลม", "หนาว", "ขับรถ", "ถนน", "พยากรณ์",
     ],
     "disaster": [
@@ -102,31 +104,56 @@ DEFAULT_CITY = "Sapporo"
 DEFAULT_REGION = "Hokkaido"
 DEFAULT_LINE = "All"
 
+SUPPORTED_LANGUAGES = ("th", "ja", "en")
+SHORT_KEYWORD_LEN = 4  # short or numeric keywords must match a whole word
+
 _THAI_RE = re.compile(r"[฀-๿]")
 _JAPANESE_RE = re.compile(r"[぀-ヿ一-鿿]")
+_LETTER_RE = re.compile(r"[^\W\d_]")
 _KEYWORD_CACHE: Dict[str, "re.Pattern[str]"] = {}
 
 
+def _normalize_text(text: str) -> str:
+    return " ".join((text or "").lower().split())
+
+
 def contains_keyword(text: str, keyword: str) -> bool:
-    """Word-start match for Latin keywords ('rain' must not match 'train', but 'snow' matches
-    'snowing'); plain substring match for scripts without word spacing such as Thai."""
+    """Keyword match for routing rules.
+
+    * Non-ASCII keywords (Thai, Japanese) match as substrings: those scripts have no word spacing.
+    * Short or numeric ASCII keywords (``jr``, ``live``, ``119``) must match a whole word,
+      so ``jr`` does not match ``jrpass`` and ``119`` does not match ``1190``.
+    * Longer ASCII keywords match at a word start, so ``snow`` matches ``snowing`` but
+      ``rain`` never matches ``train``.
+    """
     if not keyword.isascii():
         return keyword in text
     pattern = _KEYWORD_CACHE.get(keyword)
     if pattern is None:
-        pattern = re.compile(r"(?<![a-z0-9])" + re.escape(keyword))
+        whole_word = len(keyword) <= SHORT_KEYWORD_LEN or keyword.isdigit()
+        tail = r"(?![a-z0-9])" if whole_word else ""
+        pattern = re.compile(r"(?<![a-z0-9])" + re.escape(keyword) + tail)
         _KEYWORD_CACHE[keyword] = pattern
     return pattern.search(text) is not None
 
 
-def detect_language(text: str) -> str:
-    """Returns ``th``, ``ja`` or ``en`` based on the script used in ``text``."""
-    if not isinstance(text, str):
-        return "en"
-    if _THAI_RE.search(text):
-        return "th"
-    if _JAPANESE_RE.search(text):
-        return "ja"
+def detect_language(text: str, fallback: Optional[str] = None) -> str:
+    """Returns ``th``, ``ja`` or ``en`` from the script used in ``text``.
+
+    ``fallback`` (the client's locale) is used only when the text contains no letters at all,
+    because the user's own writing always decides the reply language.
+    """
+    if isinstance(text, str):
+        if _THAI_RE.search(text):
+            return "th"
+        if _JAPANESE_RE.search(text):
+            return "ja"
+        if _LETTER_RE.search(text):
+            return "en"
+    if isinstance(fallback, str):
+        code = fallback.strip().lower()[:2]
+        if code in SUPPORTED_LANGUAGES:
+            return code
     return "en"
 
 
@@ -139,14 +166,7 @@ class IntentClassifier:
     ):
         self.llm_client = llm_client
         self.confidence_threshold = confidence_threshold
-        if model is None:
-            try:
-                from config import config
-
-                model = getattr(config, "ROUTER_MODEL", DEFAULT_ROUTER_MODEL)
-            except ImportError:
-                model = DEFAULT_ROUTER_MODEL
-        self.model = model
+        self.model = model if model is not None else config_value("ROUTER_MODEL", DEFAULT_ROUTER_MODEL)
 
     # ------------------------------------------------------------------
     # Route classification
@@ -154,10 +174,10 @@ class IntentClassifier:
     def classify_message(self, query: str, history: Optional[List[Dict[str, str]]] = None) -> RouteDecision:
         """Classifies ``query``; on any provider or parsing failure falls back to keywords."""
         keyword_route = self.keyword_route(query)
-        hints = self.tool_hints(query)
+        keyword_hints = self.tool_hints(query)
 
-        if self.llm_client is None or not getattr(self.llm_client, "is_configured", True):
-            return self._fallback_decision(keyword_route, hints, "router unavailable: provider not configured")
+        if not provider_ready(self.llm_client):
+            return self._fallback_decision(keyword_route, keyword_hints, "router unavailable: provider not configured")
 
         messages: List[Dict[str, str]] = [{"role": "system", "content": ROUTER_SYSTEM_PROMPT}]
         for turn in (history or [])[-4:]:
@@ -171,12 +191,12 @@ class IntentClassifier:
             )
         except LLMClientError as exc:
             logger.warning("router provider failure: %s", exc)
-            return self._fallback_decision(keyword_route, hints, f"router error: {exc}")
+            return self._fallback_decision(keyword_route, keyword_hints, f"router error: {exc}")
 
         parsed = extract_json_object(raw)
         if not parsed or parsed.get("route") not in ROUTES:
             logger.warning("router returned an invalid route payload")
-            return self._fallback_decision(keyword_route, hints, "router returned an invalid route")
+            return self._fallback_decision(keyword_route, keyword_hints, "router returned an invalid route")
 
         try:
             confidence = float(parsed.get("confidence", 1.0))
@@ -184,8 +204,8 @@ class IntentClassifier:
             confidence = 0.0
         confidence = max(0.0, min(1.0, confidence))
 
-        llm_hints = parsed.get("tools") if isinstance(parsed.get("tools"), list) else []
-        merged_hints = [name for name in TOOL_NAMES if name in llm_hints or name in hints]
+        llm_hints = parsed.get("tools") if isinstance(parsed.get("tools"), list) else None
+        hints = self._merge_hints(llm_hints, keyword_hints)
 
         if confidence < self.confidence_threshold and keyword_route:
             logger.info("router low confidence (%.2f); keyword fallback -> %s", confidence, keyword_route)
@@ -195,7 +215,7 @@ class IntentClassifier:
                 reasoning="low-confidence LLM route overridden by keyword rules",
                 fallback_used=True,
                 source="keyword",
-                tool_hints=merged_hints,
+                tool_hints=hints,
             )
 
         return RouteDecision(
@@ -204,10 +224,20 @@ class IntentClassifier:
             reasoning=str(parsed.get("reasoning", ""))[:300],
             fallback_used=False,
             source="llm",
-            tool_hints=merged_hints,
+            tool_hints=hints,
         )
 
+    @staticmethod
+    def _merge_hints(llm_hints: Optional[List[Any]], keyword_hints: List[str]) -> Optional[List[str]]:
+        """Combines router and keyword hints. ``None`` means "unknown": the planner then
+        queries every permitted tool rather than guessing that none is needed."""
+        merged = [name for name in TOOL_NAMES if (llm_hints and name in llm_hints) or name in keyword_hints]
+        if merged:
+            return merged
+        return None
+
     def _fallback_decision(self, keyword_route: Optional[str], hints: List[str], reason: str) -> RouteDecision:
+        tool_hints = hints or None
         if keyword_route:
             return RouteDecision(
                 route=keyword_route,
@@ -215,7 +245,7 @@ class IntentClassifier:
                 reasoning=f"{reason}; rescued by keyword rules",
                 fallback_used=True,
                 source="keyword",
-                tool_hints=hints,
+                tool_hints=tool_hints,
             )
         return RouteDecision(
             route=SAFE_DEFAULT_ROUTE,
@@ -223,12 +253,12 @@ class IntentClassifier:
             reasoning=f"{reason}; conservative default to '{SAFE_DEFAULT_ROUTE}'",
             fallback_used=True,
             source="default",
-            tool_hints=hints,
+            tool_hints=tool_hints,
         )
 
     @staticmethod
     def keyword_route(query: str) -> Optional[str]:
-        q = (query or "").lower()
+        q = _normalize_text(query)
         realtime_hit = any(contains_keyword(q, kw) for kw in KEYWORD_RULES["realtime"])
         rag_hit = any(contains_keyword(q, kw) for kw in KEYWORD_RULES["rag"])
         if realtime_hit and rag_hit:
@@ -241,7 +271,7 @@ class IntentClassifier:
 
     @staticmethod
     def tool_hints(query: str) -> List[str]:
-        q = (query or "").lower()
+        q = _normalize_text(query)
         return [name for name in TOOL_NAMES if any(contains_keyword(q, kw) for kw in TOOL_KEYWORDS[name])]
 
     # ------------------------------------------------------------------
@@ -256,14 +286,20 @@ class IntentClassifier:
 
     @staticmethod
     def extract_slots(query: str, english_query: Optional[str] = None) -> Dict[str, Optional[str]]:
-        """Extracts primitive adapter inputs. ``None`` means the user did not say."""
-        haystack = " ".join(part for part in (query, english_query) if part).lower()
+        """Extracts primitive adapter inputs. ``None`` means the user did not say.
+
+        When several cities are mentioned the first one in the text wins.
+        """
+        haystack = _normalize_text(" ".join(part for part in (query, english_query) if part))
 
         city: Optional[str] = None
+        best_position = len(haystack) + 1
         for canonical, aliases in KNOWN_CITIES.items():
-            if any(alias in haystack for alias in aliases):
-                city = canonical
-                break
+            for alias in aliases:
+                position = haystack.find(alias)
+                if position != -1 and position < best_position:
+                    best_position = position
+                    city = canonical
 
         line: Optional[str] = None
         if any(token in haystack for token in ("airport", "chitose", "สนามบิน", "ชิโตเสะ")):
@@ -279,13 +315,13 @@ class IntentClassifier:
     def missing_required_slots(decision: RouteDecision, slots: Dict[str, Optional[str]]) -> List[str]:
         """Names slots the user did not provide for the tools the route needs.
 
-        The planner fills these with conservative defaults and records a notice;
-        it never blocks a safety answer on a clarifying question.
+        The planner fills these with conservative defaults; the orchestrator records a
+        notice. A safety answer is never blocked on a clarifying question.
         """
         if not decision.needs_live_data:
             return []
         missing: List[str] = []
-        hints = decision.tool_hints or list(TOOL_NAMES)
+        hints = decision.tool_hints if decision.tool_hints is not None else list(TOOL_NAMES)
         if "weather" in hints and not slots.get("city"):
             missing.append("city")
         if "train" in hints and not slots.get("line_name"):

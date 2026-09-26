@@ -101,6 +101,7 @@ def create_router(
             enabled_agents=enabled_agents,
             received_at=datetime.now(timezone.utc).isoformat(),
             input_mode=input_mode,
+            conversation_id=payload.conversation_id,
         )
 
         try:

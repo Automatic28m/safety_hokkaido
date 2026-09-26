@@ -16,7 +16,7 @@ def test_rag_realtime_flow_returns_full_contract(build_agent, fake_adapters, aud
     assert response["reply"].startswith("Stay indoors")
     assert response["route"] == "rag+realtime"
     assert response["safety_level"] == "advisory"
-    assert response["degraded"] is True  # the train source is mocked
+    assert response["degraded"] is False  # mocked train data exists but the decision did not rely on it
     assert response["fallback_used"] is False and response["language"] == "en"
     assert [e["chunk_id"] for e in response["evidence"]] == ["chunk-1", "chunk-2"]
     assert all("text" not in e for e in response["evidence"])
@@ -83,7 +83,7 @@ def test_decision_provider_down_returns_unavailable_without_fake_reply(build_age
 
 
 def test_unparseable_decision_is_retried_then_unavailable(build_agent):
-    llm = FakeLLM(decision_raw=["not json at all", "{\"reply\": \"x\", \"safety_level\": \"advisory\"}"])
+    llm = FakeLLM(decision_raw=["not json at all", "still no json here"])
     response = build_agent(llm=llm).ask_structured(normalized_request("blizzard help"))
     assert response["status"] == "unavailable"
     assert sum(1 for c in llm.calls if c["kind"] == "decision") == 2

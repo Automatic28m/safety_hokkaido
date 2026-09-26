@@ -30,7 +30,7 @@ _MAX_REPLY_CHARS = 8000
 
 
 class GuardrailViolation(Exception):
-    """Raised when a tool call must not proceed."""
+    """Raised when a route, a tool call or a decision fails validation and must not proceed."""
 
 
 def validate_route(route: Any) -> str:
@@ -108,10 +108,13 @@ def validate_tool_result(tool: str, snapshot: Dict[str, Any]) -> Tuple[Dict[str,
     return result, notices
 
 
-def sanitize_markdown(text: str) -> str:
+def sanitize_markdown(text: str) -> Tuple[str, bool]:
+    """Strips HTML/script and caps the length. Returns (text, was_truncated)."""
     text = _SCRIPT_BLOCK.sub("", text)
-    text = _HTML_TAG.sub("", text)
-    return text.strip()[:_MAX_REPLY_CHARS]
+    text = _HTML_TAG.sub("", text).strip()
+    if len(text) > _MAX_REPLY_CHARS:
+        return text[:_MAX_REPLY_CHARS], True
+    return text, False
 
 
 def validate_decision(
@@ -128,9 +131,11 @@ def validate_decision(
     reply = decision.get("reply")
     if not isinstance(reply, str) or not reply.strip():
         raise GuardrailViolation("decision reply is empty")
-    reply = sanitize_markdown(reply)
+    reply, truncated = sanitize_markdown(reply)
     if not reply:
         raise GuardrailViolation("decision reply contained no text after sanitization")
+    if truncated:
+        notices.append(f"reply was longer than {_MAX_REPLY_CHARS} characters and was shortened.")
 
     safety_level = decision.get("safety_level")
     if safety_level not in SAFETY_LEVELS:

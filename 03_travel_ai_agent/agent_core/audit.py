@@ -29,7 +29,7 @@ def build_audit_event(
     live_results: List[ToolResult],
     index_version: Optional[str],
 ) -> AuditEvent:
-    evidence_ids = [str(e["chunk_id"]) for e in evidence if e.get("chunk_id")]
+    evidence_ids = [str(e["chunk_id"])[:256] for e in evidence if e.get("chunk_id")]
     versions: List[str] = []
     for item in evidence:
         version = (item.get("metadata") or {}).get("source_version")

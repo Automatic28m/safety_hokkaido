@@ -12,7 +12,9 @@ keeps the legacy string-returning interface.
 """
 from __future__ import annotations
 
+import json
 import logging
+import uuid
 from typing import Any, Dict, List, Optional
 
 from agent_core import guardrails
@@ -24,10 +26,13 @@ from agent_core.planner import ExecutionPlanner, evidence_public_view
 from agent_core.schemas import (
     RESPONSE_STATUS_OK,
     RESPONSE_STATUS_UNAVAILABLE,
+    ContextPackage,
     OrchestrationRequest,
     OrchestrationResponse,
+    RouteDecision,
     ToolResult,
 )
+from agent_core.settings import config_value
 from agent_core.tools import ToolExecutor
 
 logger = logging.getLogger("travel_ai_agent")
@@ -35,6 +40,14 @@ logger = logging.getLogger("travel_ai_agent")
 DEFAULT_DECISION_MODEL = "openai/gpt-oss-120b"
 DECISION_TEMPERATURE = 0.2
 DECISION_MAX_TOKENS = 1200
+DECISION_ATTEMPTS = (True, False)  # json_mode per attempt
+
+# Snapshot statuses that mean data the answer needed is missing or unreliable.
+MISSING_DATA_STATUSES = ("unavailable", "stale", "partial")
+SLOT_DEFAULT_NOTICES = {
+    "city": "weather: no city was mentioned; checked Sapporo.",
+    "line_name": "train: no line was mentioned; checked all JR Hokkaido lines.",
+}
 
 
 class TravelAgent:
@@ -62,15 +75,9 @@ class TravelAgent:
             else ContextManager(llm_client=self.llm_client, store=memory_store)
         )
         self.audit_emitter = audit_emitter if audit_emitter is not None else AuditEmitter()
-
-        if decision_model is None:
-            try:
-                from config import config
-
-                decision_model = getattr(config, "LLM_MODEL", DEFAULT_DECISION_MODEL)
-            except ImportError:
-                decision_model = DEFAULT_DECISION_MODEL
-        self.decision_model = decision_model
+        self.decision_model = (
+            decision_model if decision_model is not None else config_value("LLM_MODEL", DEFAULT_DECISION_MODEL)
+        )
 
         if planner is None:
             if retriever is None and load_models:
@@ -101,21 +108,14 @@ class TravelAgent:
             logger.exception("retrieval components could not be initialised; running without corpus")
             return None, None
 
-        if reranker is None:
+        if reranker is None and config_value("USE_RERANK", True):
             try:
-                from config import config
+                from risk_knowledge.rerankers import Reranker
 
-                use_rerank = getattr(config, "USE_RERANK", True)
-            except ImportError:
-                use_rerank = True
-            if use_rerank:
-                try:
-                    from risk_knowledge.rerankers import Reranker
-
-                    reranker = Reranker()
-                except Exception:
-                    logger.exception("reranker could not be initialised; using hybrid order")
-                    reranker = None
+                reranker = Reranker()
+            except Exception:
+                logger.exception("reranker could not be initialised; using hybrid order")
+                reranker = None
         return retriever, reranker
 
     # ------------------------------------------------------------------
@@ -127,8 +127,6 @@ class TravelAgent:
 
     def ask(self, query: str, chat_history: Optional[List[Dict[str, str]]] = None, enabled_agents=None) -> str:
         """Legacy interface: returns the reply text only."""
-        import uuid
-
         request = OrchestrationRequest(
             request_id=str(uuid.uuid4()),
             original_query=query,
@@ -146,11 +144,12 @@ class TravelAgent:
 
         # 1. history (API history is authoritative)
         history, history_source = self.context_manager.resolve_history(request)
-        language = detect_language(query)
+        language = detect_language(query, fallback=request.locale)
 
         # 2. route
         decision = self.classifier.classify_message(query, history)
         route = guardrails.validate_route(decision.route)
+        needs = self.classifier.detect_context_needs(decision)
         if decision.fallback_used:
             notices.append(f"router fallback used ({decision.source}): {decision.reasoning}")
         logger.info(
@@ -159,9 +158,8 @@ class TravelAgent:
         )
 
         # 3. reformulate (for retrieval only) and 4. translate retrieval query
-        standalone = query
         english_query: Optional[str] = None
-        if decision.needs_retrieval or decision.needs_live_data:
+        if needs["needs_retrieval"] or needs["needs_live_data"]:
             standalone, notice = self.context_manager.reformulate_query(query, history)
             if notice:
                 notices.append(notice)
@@ -171,6 +169,8 @@ class TravelAgent:
 
         # 5. plan
         slots = self.classifier.extract_slots(query, english_query)
+        for slot in self.classifier.missing_required_slots(decision, slots):
+            notices.append(SLOT_DEFAULT_NOTICES[slot])
         plan = self.planner.plan(decision, request, slots, retrieval_query=english_query)
         notices.extend(plan.notices)
 
@@ -189,7 +189,7 @@ class TravelAgent:
         live_results: List[ToolResult] = self.planner.execute_tools(plan)
         for result in live_results:
             notices.extend(result.notices)
-        live_degraded = any(result.status != "ok" for result in live_results)
+        missing_live_data = any(result.status in MISSING_DATA_STATUSES for result in live_results)
 
         # 8. package for node 07
         tool_policy = {
@@ -199,30 +199,16 @@ class TravelAgent:
             "skipped_tools": plan.skipped_tools,
         }
         package = self.context_manager.build_context_package(
-            request,
-            history,
-            evidence,
-            [r.snapshot for r in live_results],
-            language,
-            tool_policy,
-            route,
+            request, history, evidence, [r.snapshot for r in live_results], language, tool_policy, route
         )
 
         # 9. generate
-        dependency_degraded = retrieval_degraded or live_degraded
         try:
             decision_dict = self._generate(package)
         except LLMClientError as exc:
             logger.warning("request_id=%s decision provider unavailable: %s", request.request_id, exc)
-            return OrchestrationResponse(
-                status=RESPONSE_STATUS_UNAVAILABLE,
-                request_id=request.request_id,
-                route=route,
-                notices=notices + [f"decision provider unavailable: {exc}"],
-                evidence=[evidence_public_view(e) for e in evidence],
-                live_sources=[r.public_view() for r in live_results],
-                fallback_used=decision.fallback_used,
-                language=language,
+            return self._unavailable(
+                request, decision, language, evidence, live_results, notices + [f"decision provider unavailable: {exc}"]
             )
 
         # 10. guardrails on the decision
@@ -231,25 +217,22 @@ class TravelAgent:
                 decision_dict,
                 evidence_ids=[e["chunk_id"] for e in evidence],
                 live_providers=[r.provider for r in live_results],
-                dependency_degraded=dependency_degraded,
+                dependency_degraded=retrieval_degraded or missing_live_data,
             )
         except guardrails.GuardrailViolation as exc:
             logger.warning("request_id=%s decision rejected: %s", request.request_id, exc)
-            return OrchestrationResponse(
-                status=RESPONSE_STATUS_UNAVAILABLE,
-                request_id=request.request_id,
-                route=route,
-                notices=notices + [f"decision rejected by guardrails: {exc}"],
-                evidence=[evidence_public_view(e) for e in evidence],
-                live_sources=[r.public_view() for r in live_results],
-                fallback_used=decision.fallback_used,
-                language=language,
+            return self._unavailable(
+                request, decision, language, evidence, live_results, notices + [f"decision rejected by guardrails: {exc}"]
             )
         notices.extend(guard_notices)
         notices.extend(result.notices)
 
+        # A simulated source degrades the answer only when the decision actually relied on it.
+        mocked_used = {r.provider for r in live_results if r.status == "mocked"} & set(result.used_live_sources)
+        degraded = result.degraded or bool(mocked_used)
+
         # 11. memory (this conversation only)
-        self.context_manager.remember(request, result.reply)
+        self.context_manager.remember(request, result.reply, history=history, history_source=history_source)
 
         # 12. audit (node 08)
         response = OrchestrationResponse(
@@ -257,7 +240,7 @@ class TravelAgent:
             reply=result.reply,
             request_id=request.request_id,
             route=route,
-            degraded=result.degraded,
+            degraded=degraded,
             notices=_dedupe(notices),
             evidence=[evidence_public_view(e) for e in evidence],
             live_sources=[r.public_view() for r in live_results],
@@ -272,10 +255,31 @@ class TravelAgent:
         )
         return response
 
+    @staticmethod
+    def _unavailable(
+        request: OrchestrationRequest,
+        decision: RouteDecision,
+        language: str,
+        evidence: List[Dict[str, Any]],
+        live_results: List[ToolResult],
+        notices: List[str],
+    ) -> OrchestrationResponse:
+        """Response when no trustworthy answer can be produced (node 02 maps it to HTTP 503)."""
+        return OrchestrationResponse(
+            status=RESPONSE_STATUS_UNAVAILABLE,
+            request_id=request.request_id,
+            route=decision.route,
+            notices=_dedupe(notices),
+            evidence=[evidence_public_view(e) for e in evidence],
+            live_sources=[r.public_view() for r in live_results],
+            fallback_used=decision.fallback_used,
+            language=language,
+        )
+
     # ------------------------------------------------------------------
     # Decision generation (node 07 prompt -> provider -> node 07 parse)
     # ------------------------------------------------------------------
-    def _generate(self, package) -> Dict[str, Any]:
+    def _generate(self, package: ContextPackage) -> Dict[str, Any]:
         messages = self.generator.format_prompt(
             original_query=package.original_query,
             history=package.history,
@@ -286,7 +290,7 @@ class TravelAgent:
         )
 
         last_error = "decision output could not be parsed"
-        for attempt, json_mode in enumerate((True, False)):
+        for attempt, json_mode in enumerate(DECISION_ATTEMPTS, start=1):
             raw = self.llm_client.complete(
                 messages,
                 model=self.decision_model,
@@ -296,21 +300,44 @@ class TravelAgent:
             )
             parsed = extract_json_object(raw)
             if parsed is None:
-                logger.warning("decision attempt %d returned no JSON object", attempt + 1)
+                logger.warning("decision attempt %d returned no JSON object", attempt)
                 continue
-            import json
 
-            decision = self.generator.parse_llm_response(json.dumps(parsed, ensure_ascii=False))
+            decision = self.generator.parse_llm_response(json.dumps(_coerce_decision(parsed), ensure_ascii=False))
             if _is_generator_fallback(decision):
                 last_error = "; ".join(decision.get("notices") or [last_error])
-                logger.warning("decision attempt %d rejected by node 07 validation", attempt + 1)
+                logger.warning("decision attempt %d rejected by node 07 validation", attempt)
                 continue
             return decision
 
         raise LLMClientError(last_error)
 
 
+def _coerce_decision(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalizes loosely typed model output (null lists, numeric ids) before node 07's strict parse.
+
+    Guardrails still verify every id against what was actually supplied.
+    """
+
+    def string_list(value: Any) -> List[str]:
+        if isinstance(value, (list, tuple)):
+            return [str(v) for v in value if v is not None and str(v).strip()]
+        if isinstance(value, str) and value.strip():
+            return [value]
+        return []
+
+    coerced = dict(parsed)
+    coerced["reply"] = parsed.get("reply") if isinstance(parsed.get("reply"), str) else ""
+    coerced["safety_level"] = str(parsed.get("safety_level") or "unknown")
+    coerced["used_evidence_ids"] = string_list(parsed.get("used_evidence_ids"))
+    coerced["used_live_sources"] = string_list(parsed.get("used_live_sources"))
+    coerced["degraded"] = bool(parsed.get("degraded", False))
+    coerced["notices"] = string_list(parsed.get("notices"))
+    return coerced
+
+
 def _is_generator_fallback(decision: Dict[str, Any]) -> bool:
+    # Node 07 marks its own fallback with this notice prefix (decision_engine/generator.py).
     notices = decision.get("notices") or []
     return any(str(n).startswith("Fallback activated") for n in notices)
 

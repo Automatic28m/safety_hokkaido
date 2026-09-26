@@ -8,11 +8,12 @@ call passes ``guardrails.validate_tool_args`` before and
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from agent_core import guardrails
 from agent_core.classifier import DEFAULT_CITY, DEFAULT_LINE, DEFAULT_REGION
 from agent_core.schemas import TOOL_NAMES, ExecutionPlan, OrchestrationRequest, RouteDecision, ToolCall, ToolResult
+from agent_core.settings import config_value
 from agent_core.tools import ToolExecutor
 
 logger = logging.getLogger("travel_ai_agent")
@@ -20,6 +21,15 @@ logger = logging.getLogger("travel_ai_agent")
 DEFAULT_RETRIEVER_TOP_K = 10
 DEFAULT_FINAL_TOP_K = 3
 EXCERPT_CHARS = 300
+MAX_RETRIEVER_NOTICES = 3
+
+# Default scope per tool when the user named none. Conservative Hokkaido-wide values.
+DEFAULT_TOOL_ARGS: Dict[str, Dict[str, str]] = {
+    "weather": {"city": DEFAULT_CITY},
+    "disaster": {"region": DEFAULT_REGION},
+    "train": {"line_name": DEFAULT_LINE},
+}
+SLOT_FOR_TOOL: Dict[str, str] = {"weather": "city", "disaster": "region", "train": "line_name"}
 
 
 class RetrievalOutcome:
@@ -95,17 +105,8 @@ class ExecutionPlanner:
         self.tool_executor = tool_executor if tool_executor is not None else ToolExecutor()
         self.retriever = retriever
         self.reranker = reranker
-        if retriever_top_k is None or final_top_k is None:
-            try:
-                from config import config
-
-                retriever_top_k = retriever_top_k or getattr(config, "RETRIEVER_TOP_K", DEFAULT_RETRIEVER_TOP_K)
-                final_top_k = final_top_k or getattr(config, "FINAL_TOP_K", DEFAULT_FINAL_TOP_K)
-            except ImportError:
-                retriever_top_k = retriever_top_k or DEFAULT_RETRIEVER_TOP_K
-                final_top_k = final_top_k or DEFAULT_FINAL_TOP_K
-        self.retriever_top_k = int(retriever_top_k)
-        self.final_top_k = int(final_top_k)
+        self.retriever_top_k = int(retriever_top_k or config_value("RETRIEVER_TOP_K", DEFAULT_RETRIEVER_TOP_K))
+        self.final_top_k = int(final_top_k or config_value("FINAL_TOP_K", DEFAULT_FINAL_TOP_K))
 
     # ------------------------------------------------------------------
     # Planning
@@ -125,7 +126,11 @@ class ExecutionPlanner:
             return plan
 
         allowed = set(self.tool_executor.allowed_tools())
-        wanted = decision.tool_hints or list(TOOL_NAMES)
+        if decision.tool_hints is None:
+            wanted = list(TOOL_NAMES)
+            plan.notices.append("no specific live source was identified; all permitted live sources were queried.")
+        else:
+            wanted = decision.tool_hints
 
         for name in TOOL_NAMES:
             if name not in wanted:
@@ -139,9 +144,7 @@ class ExecutionPlanner:
                 plan.notices.append(f"{name}: adapter is not available in this deployment.")
                 continue
 
-            call, notice = self._build_call(name, slots)
-            if notice:
-                plan.notices.append(notice)
+            call = self._build_call(name, slots)
             try:
                 validated = guardrails.validate_tool_args(call, request.enabled_agents, allowed)
             except guardrails.GuardrailViolation as exc:
@@ -154,21 +157,10 @@ class ExecutionPlanner:
         return plan
 
     @staticmethod
-    def _build_call(name: str, slots: Dict[str, Optional[str]]) -> Tuple[ToolCall, Optional[str]]:
-        if name == "weather":
-            city = slots.get("city")
-            if city:
-                return ToolCall(name=name, args={"city": city}), None
-            return (
-                ToolCall(name=name, args={"city": DEFAULT_CITY}),
-                f"weather: no city was mentioned; checked {DEFAULT_CITY}.",
-            )
-        if name == "disaster":
-            return ToolCall(name=name, args={"region": slots.get("region") or DEFAULT_REGION}), None
-        line = slots.get("line_name")
-        if line:
-            return ToolCall(name=name, args={"line_name": line}), None
-        return ToolCall(name=name, args={"line_name": DEFAULT_LINE}), None
+    def _build_call(name: str, slots: Dict[str, Optional[str]]) -> ToolCall:
+        slot = SLOT_FOR_TOOL[name]
+        value = slots.get(slot) or DEFAULT_TOOL_ARGS[name][slot]
+        return ToolCall(name=name, args={slot: value})
 
     # ------------------------------------------------------------------
     # Retrieval (node 06)
@@ -183,9 +175,16 @@ class ExecutionPlanner:
         outcome.index_version = getattr(self.retriever, "index_version", None) or None
         if getattr(self.retriever, "is_ready", True) is False or getattr(self.retriever, "degraded", False):
             outcome.degraded = True
-            for notice in getattr(self.retriever, "notices", []) or []:
-                outcome.notices.append(f"retrieval: {notice}")
-            if not outcome.notices:
+            # Node 06 accumulates notices over the process lifetime; report only the latest few.
+            seen: List[str] = []
+            for notice in reversed(list(getattr(self.retriever, "notices", []) or [])):
+                text = str(notice)
+                if text not in seen:
+                    seen.append(text)
+                if len(seen) >= MAX_RETRIEVER_NOTICES:
+                    break
+            outcome.notices.extend(f"retrieval: {text}" for text in reversed(seen))
+            if not seen:
                 outcome.notices.append("retrieval index is not ready; answer is not grounded in the corpus.")
 
         try:
@@ -196,7 +195,6 @@ class ExecutionPlanner:
             outcome.notices.append(f"retrieval failed ({exc.__class__.__name__}).")
             return outcome
 
-        selected = candidates
         if self.reranker is not None and candidates:
             try:
                 selected = self.reranker.rerank(query, candidates, top_k=self.final_top_k) or []

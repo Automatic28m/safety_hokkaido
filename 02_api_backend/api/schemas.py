@@ -42,6 +42,9 @@ class ChatRequest(BaseModel):
     message: Optional[str] = None
     messages: Optional[List[ChatMessage]] = Field(default=None, max_length=50)
     enabled_agents: Optional[Dict[str, bool]] = None
+    # Optional client-side conversation identifier. Node 03 scopes server memory to it;
+    # without it no server-side memory is kept and the request is stateless.
+    conversation_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
 
     @model_validator(mode="after")
     def _validate_query(self) -> "ChatRequest":
@@ -80,6 +83,7 @@ class NormalizedAskRequest(BaseModel):
     enabled_agents: Dict[str, bool]
     received_at: str
     input_mode: str
+    conversation_id: Optional[str] = None
 
 
 class AskResponse(BaseModel):

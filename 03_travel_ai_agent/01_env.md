@@ -12,6 +12,7 @@ The orchestration service lives in `03_travel_ai_agent/agent_core/` and is impor
 | `guardrails.py` | Validation gates: route enum, tool arguments (allow-list, caller toggles, argument format), tool results, node 07 decision output. |
 | `context_manager.py` | Per-conversation memory keyed by `conversation_id`, history normalization, query reformulation/translation, package for node 07. |
 | `llm_client.py` | The only provider client (Groq). Node 07 never performs network calls. |
+| `settings.py` | Single accessor for `02_api_backend/config.py` values with defaults; `provider_ready()`. |
 | `audit.py` | Privacy-minimized audit event sent to node 08 after each answer. |
 | `pipeline.py` | Backward-compatible alias (`RAGPipeline = TravelAgent`) for `02_api_backend/main.py`. |
 

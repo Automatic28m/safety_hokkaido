@@ -89,7 +89,7 @@ def test_remember_requires_conversation_id_and_memory_toggle():
 
 
 def test_memory_summarizes_long_history_with_summarizer():
-    memory = ConversationMemory(summarizer=lambda turns: f"{len(turns)} old turns")
+    memory = ConversationMemory(summarize=lambda turns: f"{len(turns)} old turns")
     for i in range(MAX_TURNS_PER_CONVERSATION + 1):
         memory.add_turn("user" if i % 2 == 0 else "assistant", f"turn {i}")
     history = memory.get_history()

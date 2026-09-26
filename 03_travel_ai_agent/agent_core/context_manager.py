@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from agent_core.llm_client import LLMClientError
 from agent_core.schemas import ContextPackage, OrchestrationRequest
+from agent_core.settings import config_value, provider_ready
 
 logger = logging.getLogger("travel_ai_agent")
 
@@ -28,6 +29,8 @@ MAX_CONVERSATIONS = 500
 HISTORY_WINDOW_FOR_PROMPTS = 6
 
 DEFAULT_TRANSFORM_MODEL = "openai/gpt-oss-20b"
+
+Summarizer = Callable[[List[Dict[str, str]]], str]
 
 SUMMARY_PROMPT = (
     "You are a conversation summarizer. Summarize the following conversation turns into "
@@ -70,12 +73,20 @@ def strip_trailing_query(history: List[Dict[str, str]], query: str) -> List[Dict
     return history
 
 
-class ConversationMemory:
-    """History of one conversation, summarized when it grows too long."""
+def _truncate_summary(turns: List[Dict[str, str]]) -> str:
+    return " | ".join(f"{t['role']}: {t['content'][:80]}" for t in turns[-6:])
 
-    def __init__(self, summarizer: Optional[Callable[[List[Dict[str, str]]], str]] = None):
+
+class ConversationMemory:
+    """History of one conversation, summarized when it grows too long.
+
+    The summarizer is looked up through ``summarize`` on every call, so the
+    memory never holds on to a stale bound method.
+    """
+
+    def __init__(self, summarize: Optional[Summarizer] = None):
         self._turns: List[Dict[str, str]] = []
-        self._summarizer = summarizer
+        self._summarize: Summarizer = summarize or _truncate_summary
         self._lock = threading.Lock()
 
     def add_turn(self, role: str, content: str) -> None:
@@ -83,6 +94,12 @@ class ConversationMemory:
             return
         with self._lock:
             self._turns.append({"role": role, "content": content})
+            self._maybe_summarize()
+
+    def replace(self, turns: List[Dict[str, str]]) -> None:
+        """Replaces the whole history (used when the client sent an authoritative history)."""
+        with self._lock:
+            self._turns = [dict(t) for t in normalize_history(turns)]
             self._maybe_summarize()
 
     def get_history(self) -> List[Dict[str, str]]:
@@ -102,29 +119,33 @@ class ConversationMemory:
             return
         old = self._turns[:-RECENT_MESSAGES_TO_KEEP]
         recent = self._turns[-RECENT_MESSAGES_TO_KEEP:]
-        summary = self._summarizer(old) if self._summarizer else _truncate_summary(old)
+        try:
+            summary = self._summarize(old)
+        except Exception:  # summarization must never lose the conversation
+            logger.exception("history summarizer raised; using truncation")
+            summary = _truncate_summary(old)
         self._turns = [{"role": "assistant", "content": f"[Earlier conversation summary: {summary}]"}] + recent
 
 
-def _truncate_summary(turns: List[Dict[str, str]]) -> str:
-    return " | ".join(f"{t['role']}: {t['content'][:80]}" for t in turns[-6:])
-
-
 class ConversationMemoryStore:
-    """Registry of per-conversation memories with LRU eviction."""
+    """Registry of per-conversation memories with LRU eviction.
 
-    def __init__(
-        self,
-        summarizer: Optional[Callable[[List[Dict[str, str]]], str]] = None,
-        max_conversations: int = MAX_CONVERSATIONS,
-    ):
+    The store owns the summarizer; memories call ``store.summarize`` so that
+    replacing the summarizer applies to every conversation consistently.
+    """
+
+    def __init__(self, summarizer: Optional[Summarizer] = None, max_conversations: int = MAX_CONVERSATIONS):
         self._memories: "OrderedDict[str, ConversationMemory]" = OrderedDict()
-        self._summarizer = summarizer
+        self._summarizer: Optional[Summarizer] = summarizer
         self._max = max_conversations
         self._lock = threading.Lock()
 
-    def set_summarizer(self, summarizer: Optional[Callable[[List[Dict[str, str]]], str]]) -> None:
+    def set_summarizer(self, summarizer: Optional[Summarizer]) -> None:
         self._summarizer = summarizer
+
+    def summarize(self, turns: List[Dict[str, str]]) -> str:
+        summarizer = self._summarizer
+        return summarizer(turns) if summarizer else _truncate_summary(turns)
 
     def get(self, conversation_id: str, create: bool = True) -> Optional[ConversationMemory]:
         with self._lock:
@@ -134,7 +155,7 @@ class ConversationMemoryStore:
                 return memory
             if not create:
                 return None
-            memory = ConversationMemory(summarizer=self._summarizer)
+            memory = ConversationMemory(summarize=self.summarize)
             self._memories[conversation_id] = memory
             while len(self._memories) > self._max:
                 self._memories.popitem(last=False)
@@ -169,18 +190,10 @@ class ContextManager:
         self.llm_client = llm_client
         # An empty store is falsy (it defines __len__), so test identity, not truthiness.
         self.store = store if store is not None else memory_store
-        if model is None or use_memory is None:
-            try:
-                from config import config
-
-                model = model or getattr(config, "LLM_MODEL", DEFAULT_TRANSFORM_MODEL)
-                use_memory = getattr(config, "USE_MEMORY", True) if use_memory is None else use_memory
-            except ImportError:
-                model = model or DEFAULT_TRANSFORM_MODEL
-                use_memory = True if use_memory is None else use_memory
-        self.model = model
-        self.use_memory = bool(use_memory)
-        self.store.set_summarizer(self.summarize_history)
+        self.model = model if model is not None else config_value("LLM_MODEL", DEFAULT_TRANSFORM_MODEL)
+        self.use_memory = bool(config_value("USE_MEMORY", True) if use_memory is None else use_memory)
+        if self.store._summarizer is None:
+            self.store.set_summarizer(self.summarize_history)
 
     # ------------------------------------------------------------------
     # History
@@ -196,16 +209,33 @@ class ContextManager:
                 return memory.get_history(), "memory"
         return [], "none"
 
-    def remember(self, request: OrchestrationRequest, reply: str) -> None:
-        """Appends the exchange to the conversation's own memory only."""
+    def remember(
+        self,
+        request: OrchestrationRequest,
+        reply: str,
+        history: Optional[List[Dict[str, str]]] = None,
+        history_source: str = "none",
+    ) -> None:
+        """Updates the memory of this conversation only.
+
+        When the client sent an authoritative history, the memory is rebuilt from it so a
+        later history-less request sees the full transcript, not just the last exchange.
+        """
         if not self.use_memory or not request.conversation_id:
             return
         memory = self.store.get(request.conversation_id)
-        memory.add_turn("user", request.original_query)
-        memory.add_turn("assistant", reply)
+        exchange = [
+            {"role": "user", "content": request.original_query},
+            {"role": "assistant", "content": reply},
+        ]
+        if history_source == "api":
+            memory.replace(list(history or []) + exchange)
+        else:
+            for turn in exchange:
+                memory.add_turn(turn["role"], turn["content"])
 
     def summarize_history(self, turns: List[Dict[str, str]]) -> str:
-        if self.llm_client is None or not getattr(self.llm_client, "is_configured", True):
+        if not provider_ready(self.llm_client):
             return _truncate_summary(turns)
         transcript = "\n".join(f"{t['role'].upper()}: {t['content']}" for t in turns)
         try:
@@ -226,7 +256,7 @@ class ContextManager:
         """Rewrites a follow-up into a standalone question. The original query is never replaced."""
         if not history:
             return query, None
-        if self.llm_client is None or not getattr(self.llm_client, "is_configured", True):
+        if not provider_ready(self.llm_client):
             return query, "query reformulation skipped: provider not configured"
         transcript = "".join(
             f"{'AI' if t['role'] == 'assistant' else 'User'}: {t['content']}\n" for t in history[-4:]
@@ -253,7 +283,7 @@ class ContextManager:
         """Translates only the retrieval query; the user's own text is never modified."""
         if language == "en":
             return query, None
-        if self.llm_client is None or not getattr(self.llm_client, "is_configured", True):
+        if not provider_ready(self.llm_client):
             return query, "retrieval translation skipped: provider not configured"
         try:
             english = self.llm_client.complete(

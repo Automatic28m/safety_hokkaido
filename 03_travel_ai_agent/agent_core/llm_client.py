@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from agent_core.settings import config_value
+
 logger = logging.getLogger("travel_ai_agent")
 
 DEFAULT_API_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -34,12 +36,7 @@ class GroqChatClient:
         session: Optional[Any] = None,
     ):
         if api_key is None:
-            try:
-                from config import config
-
-                api_key = getattr(config, "GROQ_API_KEY", "")
-            except ImportError:
-                api_key = ""
+            api_key = config_value("GROQ_API_KEY", "")
         self.api_key = api_key or ""
         self.api_url = api_url
         self.timeout = timeout
@@ -96,7 +93,9 @@ class GroqChatClient:
 
         status = getattr(response, "status_code", 0)
         if status == 400 and "response_format" in payload:
-            logger.warning("provider rejected response_format; retrying without it")
+            # A 400 in JSON mode is usually "response_format unsupported"; one plain retry
+            # follows. A 400 that persists without response_format is raised below.
+            logger.warning("provider rejected the JSON-mode request; retrying without response_format")
             return None
         if status != 200:
             raise LLMClientError(f"provider returned HTTP {status}")

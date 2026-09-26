@@ -397,6 +397,26 @@ def test_ask_structured_malformed_evidence_is_dropped():
     assert resp.json()["evidence"] == []
 
 
+def test_conversation_id_is_forwarded_to_node03_and_optional():
+    pipeline = StructuredPipeline({"reply": "ok", "status": "ok"})
+    client = TestClient(make_app(pipeline))
+
+    client.post("/ask", json={"message": "hi", "conversation_id": "conv-42"})
+    client.post("/ask", json={"message": "hi again"})
+
+    assert pipeline.calls[0]["conversation_id"] == "conv-42"
+    assert pipeline.calls[1]["conversation_id"] is None
+
+
+@pytest.mark.parametrize("bad", ["", "x" * 129, 42])
+def test_invalid_conversation_id_returns_400(bad):
+    client = TestClient(make_app(FakePipeline()))
+
+    resp = client.post("/ask", json={"message": "hi", "conversation_id": bad})
+
+    assert resp.status_code == 400
+
+
 def test_node03_receives_same_request_id_as_response():
     pipeline = StructuredPipeline({"reply": "ok", "status": "ok"})
     client = TestClient(make_app(pipeline))

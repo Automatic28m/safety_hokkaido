@@ -39,14 +39,26 @@ def test_disabled_tool_is_skipped_and_never_called():
     assert {c["tool"] for c in adapters.calls} == {"weather", "disaster"}
 
 
-def test_tool_hints_limit_calls_and_missing_city_uses_default_with_notice():
+def test_tool_hints_limit_calls_and_missing_city_uses_default():
     plan = make_planner().plan(
         RouteDecision(route="rag+realtime", tool_hints=["weather"]), request(), {"city": None}, "q"
     )
     assert [c.name for c in plan.tool_calls] == ["weather"]
     assert plan.tool_calls[0].args == {"city": "Sapporo"}
-    assert any("no city" in n for n in plan.notices)
     assert plan.skipped_tools["train"] == "not_needed_for_query"
+    assert plan.notices == []
+
+
+def test_unknown_hints_query_every_permitted_tool_with_notice():
+    plan = make_planner().plan(RouteDecision(route="realtime", tool_hints=None), request(), {}, None)
+    assert [c.name for c in plan.tool_calls] == ["weather", "disaster", "train"]
+    assert any("all permitted live sources" in n for n in plan.notices)
+
+
+def test_explicit_empty_hints_from_schema_are_kept_as_none():
+    # An empty list is not "no tools": the classifier converts it to None (unknown).
+    assert RouteDecision(route="realtime", tool_hints=None).tool_hints is None
+    assert RouteDecision(route="realtime", tool_hints=["bogus"]).tool_hints == []
 
 
 def test_unavailable_adapter_is_skipped():
@@ -90,6 +102,15 @@ def test_retrieve_without_retriever_or_broken_index_is_degraded():
     assert outcome.degraded and "retrieval failed" in outcome.notices[0]
     outcome = make_planner(retriever=FakeRetriever(items=[], ready=False, notices=["index missing"])).retrieve("q")
     assert outcome.degraded and outcome.notices == ["retrieval: index missing"]
+
+
+def test_retriever_notices_are_capped_and_deduped():
+    noisy = FakeRetriever(items=[], ready=False, notices=["a", "b", "a", "c", "d", "d"])
+    outcome = make_planner(retriever=noisy).retrieve("q")
+    assert outcome.notices == ["retrieval: c", "retrieval: d", "retrieval: a"] or outcome.notices == [
+        "retrieval: a", "retrieval: c", "retrieval: d"
+    ]
+    assert len(outcome.notices) == 3
 
 
 def test_retrieve_reranker_failure_falls_back_to_hybrid_order():

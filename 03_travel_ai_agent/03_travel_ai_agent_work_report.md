@@ -109,8 +109,30 @@ Smoke test จริงผ่าน `02_api_backend/main.py` (เครื่อ
 
 ---
 
-## 🔭 5. งานที่เหลือนอกขอบเขตโมดูล 03
+## 🔍 5. รีวิวรอบ 2 (หลังเปิด PR #24) และสิ่งที่แก้เพิ่ม
 
-* โมดูล 02 ยังไม่ส่ง `conversation_id` มาใน `NormalizedAskRequest` (โมดูล 03 รองรับแล้ว เป็น optional) — เมื่อโมดูล 01/02 ส่งมา memory ต่อ conversation จะทำงานทันที
+รีวิว 3 แกน: กฎใน `architecture_guidelines.md`, spec จาก implementation plan, และล่า bug ด้วยการรันโค้ดกับ object จริงของโมดูล 02/04/06/07/08 → **ไม่พบการละเมิดกฎ** แต่พบจุดที่ควรแก้ดังนี้
+
+| ประเด็นที่พบ | ผลกระทบ | การแก้ |
+|---|---|---|
+| router ตอบ `tools: []` แล้ว planner ตีความเป็น "เรียกทุก tool" | เรียก adapter เกินจำเป็น | `tool_hints` เป็น `None` = ไม่รู้ (เรียกทุก tool ที่อนุญาต พร้อม notice), เป็น list = เรียกเฉพาะที่ระบุ |
+| `degraded` ติด `true` ทุกครั้งที่มี realtime เพราะ train เป็น `mocked` | UI เห็น degraded แม้คำตอบไม่ได้ใช้ข้อมูลจำลอง | `unavailable/stale/partial` ทำให้ degraded เสมอ; `mocked` ทำให้ degraded เฉพาะเมื่อโมดูล 07 ระบุว่าใช้ source นั้นใน `used_live_sources` |
+| โมดูล 02 ไม่ส่ง `conversation_id` → memory ต่อ conversation ไม่มีทางทำงานจริง | feature ตามแผนไม่ครบ end-to-end | เพิ่ม `conversation_id` (optional, 1–128 ตัวอักษร) ใน `ChatRequest` และ `NormalizedAskRequest` ของโมดูล 02 พร้อม test 2 เคส; ไม่ส่งมาก็ยัง stateless เหมือนเดิม |
+| decision จาก LLM ที่ `used_evidence_ids` เป็น `null`/ตัวเลข ถูก pydantic ของโมดูล 07 ปฏิเสธ → 503 | คำตอบดี ๆ ถูกทิ้ง | `_coerce_decision()` normalize ชนิดข้อมูลก่อนส่งให้ 07 parse; guardrails ยังกรอง id ที่ไม่มีจริงเหมือนเดิม |
+| `HybridRetriever.notices` ของโมดูล 06 สะสมข้ามคำขอแล้วถูกส่งกลับทั้งหมด | notices รั่วข้าม request | เอาเฉพาะ 3 รายการล่าสุดแบบไม่ซ้ำ |
+| keyword สั้น (`jr`, `wind`, `119`, `live`) จับคำอื่น เช่น `jrpass`, `window`, `1190`, `I live in Sapporo` | route fallback เพี้ยน | keyword ≤ 4 ตัวอักษร/ตัวเลขต้องตรงทั้งคำ, ตัดคำ `live` ออก, ยุบช่องว่างซ้ำ |
+| เมื่อ client ส่ง history มา memory เก็บแค่คู่สนทนาล่าสุด | คำขอถัดไปที่ไม่ส่ง history เห็นบทสนทนาไม่ครบ | `remember()` สร้าง memory ใหม่จาก API history + คำตอบ |
+| ตัดคำตอบเกิน 8000 ตัวอักษรแบบเงียบ | ข้อความความปลอดภัยอาจหายโดยไม่มีใครรู้ | เพิ่ม notice เมื่อถูกตัด |
+| `ContextManager` ตัวที่สองเขียนทับ summarizer ของ store กลาง | state ปนกันระหว่าง instance | memory เรียก summarizer ผ่าน store เสมอ และตั้งค่าเฉพาะเมื่อยังไม่มี |
+| `locale` รับมาแต่ไม่ใช้ | — | ใช้เป็น fallback ของภาษาเฉพาะเมื่อข้อความไม่มีตัวอักษรเลย |
+| โค้ดซ้ำ: `try: from config` 6 จุด, สร้าง response ซ้ำ 3 จุด, ฟังก์ชันใน classifier ที่ไม่ถูกเรียก | อ่านยาก/ดูแลยาก | เพิ่ม `settings.py` (`config_value`, `provider_ready`), `_unavailable()` helper, `detect_context_needs()`/`missing_required_slots()` ถูกใช้ใน `main.py` แล้ว |
+
+ผลทดสอบหลังแก้: `03_travel_ai_agent` **83 passed** (เพิ่ม `tests/test_review_fixes.py` 15 เคส), `02_api_backend` **47 passed**, compileall ผ่าน
+
+---
+
+## 🔭 6. งานที่เหลือนอกขอบเขตโมดูล 03
+
+* โมดูล 01 (ChatBot.jsx) ยังไม่ส่ง `conversation_id` ใน body ของ `/ask` — โมดูล 02/03 รองรับแล้ว เมื่อ UI ส่งมา memory ต่อ conversation จะทำงานทันที
 * โมดูล 01 ยังอ่านเฉพาะ `reply`; ฟิลด์ `notices`, `degraded`, `evidence`, `live_sources` พร้อมให้ UI แสดงสถานะ unavailable/stale/mocked ตามกฎของโมดูล 01
 * การส่ง audit ไปโมดูล 08 ต้องตั้ง `NODE08_AUDIT_URL` และ `NODE08_AUDIT_TOKEN` ใน `.env` ของ backend เมื่อ deploy โมดูล 08 แล้ว

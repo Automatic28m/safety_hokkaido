@@ -12,7 +12,7 @@ The order below is fixed. Each step records its outcome in `notices` so the resp
 8. **Call tools** from node 04 when the route includes `realtime`. Every snapshot is kept, including `unavailable`, `stale`, `partial` and `mocked`, and each one produces a notice through `guardrails.validate_tool_result()`.
 9. **Build the context package** (`original_query`, windowed history, evidence, live snapshots, language, tool policy) and hand it to node 07 `format_prompt()`.
 10. **Generate** by sending the formatted messages to the provider through `llm_client.py`; node 07 `parse_llm_response()` validates the JSON. A provider outage returns `status: "unavailable"` (node 02 maps it to HTTP 503). No imitation reply is produced.
-11. **Guard the decision** with `guardrails.validate_decision()`: sanitize HTML, restrict `used_evidence_ids` / `used_live_sources` to what was actually supplied, propagate `degraded`.
+11. **Guard the decision** with `guardrails.validate_decision()`: sanitize HTML, restrict `used_evidence_ids` / `used_live_sources` to what was actually supplied, propagate `degraded`. `unavailable`, `stale` and `partial` snapshots always degrade the answer; a `mocked` snapshot degrades it only when the decision relied on that source.
 12. **Remember** the exchange in the memory of this `conversation_id` only.
 13. **Emit an audit event** to node 08 (`request_id`, timestamp, route, degraded, evidence IDs, source versions, index version). No query or reply text is included.
 
