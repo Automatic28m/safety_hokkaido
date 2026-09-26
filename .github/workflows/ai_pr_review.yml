@@ -51,8 +51,12 @@ jobs:
             const fs = require('fs');
             const reviewText = fs.readFileSync('review_output.md', 'utf8');
             
-            // Determine if the AI approved it based on the expected phrase
-            const isApproved = reviewText.includes('✅ **Approved:');
+            // Determine if the AI approved it based on the expected phrase.
+            // Markdown emphasis is stripped first: the model sometimes writes
+            // "**✅ Approved:" instead of "✅ **Approved:", which used to be read
+            // as a rejection even though the review said no violations were found.
+            const plainText = reviewText.replace(/[*_`]/g, '');
+            const isApproved = /✅\s*Approved:/i.test(plainText);
             const eventType = isApproved ? 'APPROVE' : 'REQUEST_CHANGES';
             
             await github.rest.pulls.createReview({
