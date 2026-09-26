@@ -31,17 +31,16 @@ jobs:
         id: get_diff
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
-          # Get the diff between the target branch (develop) and the PR branch
-          DIFF=$(git diff origin/${{ github.event.pull_request.base.ref }}...HEAD)
-          
-          # Use EOF to handle multi-line diffs in GITHUB_ENV safely
-          echo "PR_DIFF<<EOF" >> $GITHUB_ENV
-          echo "$DIFF" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          # Write the diff to a file instead of GITHUB_ENV: a large diff exported as an
+          # environment variable exceeds the Linux argument limit ("Argument list too long")
+          # and every later step fails to start. The reviewer script reads this file.
+          git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > "$RUNNER_TEMP/pr_diff.txt"
+          wc -c "$RUNNER_TEMP/pr_diff.txt"
 
       - name: Run AI Reviewer Script
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PR_DIFF_FILE: ${{ runner.temp }}/pr_diff.txt
         run: python .github/scripts/ai_pr_reviewer.py
 
       - name: Submit Formal PR Review
