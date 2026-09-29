@@ -1,33 +1,75 @@
 import { NextResponse } from 'next/server';
 
-export const maxDuration = 60; 
+export const maxDuration = 60;
 
+// Keeps the env name already used by the project. Server-only (no NEXT_PUBLIC_).
 const backendApiUrl = process.env.BACKEND_API_URL || 'http://127.0.0.1:8000';
+// Current backend exposes /ask; switch to /api/chat with BACKEND_CHAT_PATH when module 02 is ready.
+const chatPath = process.env.BACKEND_CHAT_PATH || '/ask';
 
 export async function POST(req) {
-    try {
-        const payload = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
+  }
 
-        console.log("Next.js Proxy: Forwarding user query and history to Python Agentic RAG Backend...");
-        
-        try {
-            const ragResponse = await fetch(`${backendApiUrl}/ask`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            const ragData = await ragResponse.json();
-            return NextResponse.json({ reply: ragData.reply });
-            
-        } catch (backendError) {
-            console.error("Python Backend is down:", backendError);
-            return NextResponse.json({ 
-                reply: "Sorry, my Hokkaido Knowledge Engine is currently offline. Please ensure the Python backend is running on port 8000!" 
-            });
-        }
-    } catch (error) {
-        console.error("Chat API Error:", error);
-        return NextResponse.json({ reply: error.message }, { status: 500 });
+  const { conversation_id, message, locale, messages } = body ?? {};
+  if (typeof message !== 'string' || !message.trim() || message.length > 2000 || typeof conversation_id !== 'string') {
+    return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+  }
+
+  // Dev-only: set MOCK_BACKEND=true in .env.local to test the UI without module 02. Off by default.
+  if (process.env.MOCK_BACKEND === 'true') {
+    const th = locale === 'th';
+    const q = message.toLowerCase();
+    const level = /earthquake|แผ่นดินไหว|ฮาโกดาเตะ|hakodate/.test(q) ? 'AVOID_TRAVEL' : /train|delay|รถไฟ|ล่าช้า/.test(q) ? 'WARNING' : 'SAFE';
+    const text = {
+      SAFE: th ? '[ข้อมูลจำลอง] สภาพอากาศปกติ เดินทางได้ตามปกติ' : '[MOCK] Conditions look normal. Travel as planned.',
+      WARNING: th ? '[ข้อมูลจำลอง] ดึงสถานะรถไฟสดไม่ได้ ควรตรวจสอบก่อนเดินทาง' : '[MOCK] Live train status is unavailable. Please check before travelling.',
+      AVOID_TRAVEL: th ? '[ข้อมูลจำลอง] ตรวจพบแผ่นดินไหวรุนแรง หลีกเลี่ยงการเดินทางและไปศูนย์อพยพ' : '[MOCK] Strong earthquake detected. Avoid travel and go to a shelter.',
+    }[level];
+    await new Promise((r) => setTimeout(r, 800));
+    return NextResponse.json({
+      message_id: `mock-${Date.now()}`,
+      answer: text,
+      safety_level: level,
+      status: level === 'WARNING' ? 'degraded' : 'ok',
+      sources_used: ['Mock data'],
+      service_status: { weather: 'ok', train: level === 'WARNING' ? 'down' : 'ok', flight: 'ok', traffic: 'ok' },
+    });
+  }
+
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 55000);
+  try {
+    const upstream = await fetch(`${backendApiUrl}${chatPath}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversation_id,
+        message,
+        language: locale === 'th' ? 'th' : 'en',
+        messages: Array.isArray(messages) ? messages.slice(-21) : [{ role: 'user', content: message }],
+        enabled_agents: { weather: true, disaster: true },
+      }),
+      signal: ctl.signal,
+    });
+
+    let data = null;
+    try { data = await upstream.json(); } catch { /* non-JSON body */ }
+
+    // Real status is passed through; a backend failure is never returned as HTTP 200
+    if (!upstream.ok || !data) {
+      return NextResponse.json({ error: 'backend_error' }, { status: upstream.ok ? 502 : upstream.status });
     }
+    if (data.answer === undefined && data.reply !== undefined) data.answer = data.reply;
+    return NextResponse.json(data);
+  } catch (err) {
+    console.error('Chat proxy error:', err);
+    return NextResponse.json({ error: 'backend_unavailable' }, { status: 503 });
+  } finally {
+    clearTimeout(timer);
+  }
 }

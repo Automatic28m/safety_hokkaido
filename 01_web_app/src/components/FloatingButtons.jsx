@@ -3,16 +3,19 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import ChatBot from './ChatBot';
 
 export default function FloatingButtons() {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const locale = useLocale();
+  const t = useTranslations('Shell');
 
   return (
     <>
-      <div className="fixed bottom-6 right-4 z-40 flex flex-col gap-8 items-center">
+      <div className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-4 z-40 flex flex-col gap-8 items-center">
         {/* Emergency Contact */}
-        <Link href="/emergency-contact" className="relative group transition-all duration-300 hover:scale-110 hover:-translate-y-2 hover:drop-shadow-2xl active:scale-95 flex flex-col items-center">
+        <Link href={`/${locale}/emergency-contact`} aria-label={t('emergencyAlt')} className="relative group transition-all duration-300 hover:scale-110 hover:-translate-y-2 hover:drop-shadow-2xl active:scale-95 flex flex-col items-center">
           {/* Arced Text SVG */}
           <svg viewBox="0 0 100 100" className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120px] h-[120px] pointer-events-none z-10 overflow-visible">
             <path id="emergency-curve" d="M 5,60 A 45,45 0 1,1 95,60" fill="transparent" />
@@ -25,16 +28,16 @@ export default function FloatingButtons() {
               paintOrder="stroke fill"
             >
               <textPath href="#emergency-curve" startOffset="50%" textAnchor="middle">
-                contact
+                {t('floatEmergency')}
               </textPath>
             </text>
           </svg>
 
-          <div className="w-16 h-16 relative rounded-full overflow-hidden shadow-xl shadow-black/40 border-[3px] border-white bg-orange-500">
+          <div className="w-16 h-16 relative rounded-full overflow-hidden shadow-xl shadow-black/40 border-[3px] border-white bg-orange-500 pulse-ring">
              <Image 
                src="/illustrations/AI Emergency.png" 
-               alt="Emergency Contact" 
-               fill 
+               alt={t('emergencyAlt')} 
+               fill sizes="64px" 
                className="object-cover"
              />
           </div>
@@ -43,6 +46,7 @@ export default function FloatingButtons() {
         {/* AI Chat */}
         <button 
           onClick={() => setIsChatOpen(true)}
+          aria-label={t('chatAlt')}
           className="relative group transition-all duration-300 hover:scale-110 hover:-translate-y-2 hover:drop-shadow-2xl active:scale-95 flex flex-col items-center"
         >
           {/* Arced Text SVG */}
@@ -57,7 +61,7 @@ export default function FloatingButtons() {
               paintOrder="stroke fill"
             >
               <textPath href="#ai-curve" startOffset="50%" textAnchor="middle">
-                AI chat
+                {t('floatChat')}
               </textPath>
             </text>
           </svg>
@@ -65,8 +69,8 @@ export default function FloatingButtons() {
           <div className="w-16 h-16 relative rounded-full overflow-hidden shadow-xl shadow-black/40 border-[3px] border-white bg-blue-500">
              <Image 
                src="/illustrations/AI Profile.png" 
-               alt="AI Chat" 
-               fill 
+               alt={t('chatAlt')} 
+               fill sizes="64px" 
                className="object-cover"
              />
           </div>

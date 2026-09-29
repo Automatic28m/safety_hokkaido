@@ -239,5 +239,34 @@
     "tsCanHappen1": "Powerful waves that reach the shore within minutes of the shaking.",
     "tsCanHappen2": "Water that rushes far inland, well beyond normal beaches and rivers.",
     "tsCanHappen3": "Strong currents that make it impossible to stand or swim."
+  },
+  "Chat": {
+    "greeting": "Hi! I'm Tamago, your Hokkaido AI Guide. Ask me anything about disaster procedures or weather!",
+    "ready": "Ready for answer",
+    "placeholder": "Ask Tamago",
+    "thinking": "Checking live data...",
+    "errorUnavailable": "The service is temporarily unavailable, so I can't confirm current conditions. Please check official sources (JMA, JR Hokkaido) before travelling.",
+    "errorTimeout": "The server took too long to respond. Please try again. Until then, don't assume conditions are safe.",
+    "errorGeneric": "Something went wrong and I couldn't get a reliable answer. Please try again.",
+    "degraded": "Some live data is unavailable, so this answer may be incomplete.",
+    "sources": "Sources",
+    "helpful": "Helpful",
+    "notHelpful": "Not helpful",
+    "servicesTitle": "Data source status",
+    "emergencyNumbers": "Emergency: 110 (Police) · 119 (Fire / Ambulance) · Japan Visitor Hotline 050-3816-2787",
+    "services": { "weather": "Weather", "train": "JR trains", "flight": "Flights", "traffic": "Roads" },
+    "levels": { "SAFE": "Safe", "WARNING": "Caution", "AVOID_TRAVEL": "Avoid travel" },
+    "suggestions": ["Is it safe to travel to Sapporo now?", "What should I do in an earthquake?", "Are the trains running normally?"]
+  },
+  "Shell": {
+    "home": "Home",
+    "top": "Top",
+    "backToTop": "Back to top",
+    "contact": "Contact",
+    "floatEmergency": "contact",
+    "floatChat": "AI chat",
+    "emergencyAlt": "Emergency contact",
+    "chatAlt": "AI chat",
+    "call": "Call"
   }
 }
