@@ -7,6 +7,7 @@ import "../globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
+import { TripProvider } from "@/components/TripContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,7 @@ const mittraphap = localFont({
 });
 
 export const metadata = {
-  title: "SafetyHokaido",
+  title: "SafetyHokkaido",
   description: "Hokkaido Disaster Guide for Tourist",
 };
 
@@ -49,12 +50,14 @@ export default async function RootLayout({ children, params }) {
     >
       <body className="min-h-full flex flex-col bg-[#f4f7f6]">
         <NextIntlClientProvider messages={messages}>
+          <TripProvider>
           <Navbar />
           <main className="flex-1">
             {children}
           </main>
           <FloatingButtons />
           <Footer />
+          </TripProvider>
         </NextIntlClientProvider>
       </body>
     </html>
