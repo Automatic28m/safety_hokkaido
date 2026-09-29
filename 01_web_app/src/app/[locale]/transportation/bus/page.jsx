@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getTranslations } from 'next-intl/server';
+import TripPlanner from "@/components/TripPlanner";
 
 export default async function BusPage({ params }) {
   const { locale } = await params;
@@ -32,14 +33,10 @@ export default async function BusPage({ params }) {
         <div className="bg-white rounded-b-3xl shadow-md p-6 -mt-8 pt-8 mb-12">
           <h2 className="font-mittraphap text-4xl font-black text-black mb-4 uppercase">{t('title')}</h2>
           
-          <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden mb-6 border-2 border-black bg-orange-400">
-            <Image 
-              src="/illustrations/Bus.png" 
-              alt="Bus Illustration" 
-              fill 
-              className="object-contain p-2"
-            />
-          </div>
+          <div className="relative w-full aspect-[2/1] md:aspect-[3/1] mb-6">
+                                <TripPlanner mode="bus"/>
+                              </div>
+          
 
           <div className="relative mb-6">
             <div className="inline-block bg-[#0047b3] text-white font-bold py-1.5 px-4 rounded-md text-lg">
