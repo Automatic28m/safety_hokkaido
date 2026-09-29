@@ -11,6 +11,13 @@ class RiskLevel(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+class RiskTrend(str, Enum):
+    IMPROVING = "IMPROVING"
+    STABLE = "STABLE"
+    DETERIORATING = "DETERIORATING"
+    UNKNOWN = "UNKNOWN"
+
+
 class EvidenceChunkMetadata(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -142,6 +149,9 @@ class RiskAssessment(BaseModel):
 
     risk_level: RiskLevel = Field(default=RiskLevel.UNKNOWN, description="Assessed risk level")
     risk_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Numerical risk score (0.0 to 1.0)")
+    risk_trend: RiskTrend = Field(default=RiskTrend.UNKNOWN, description="Forecasted 3-24 hour risk trend")
+    forecasted_peak_score: Optional[float] = Field(default=None, description="Maximum predicted risk score in upcoming hours")
+    forecasted_peak_window: Optional[str] = Field(default=None, description="Time window of forecasted peak risk")
     primary_factors: List[str] = Field(default_factory=list, description="Key factors contributing to risk score")
     evaluated_at: str = Field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat(),
@@ -149,9 +159,13 @@ class RiskAssessment(BaseModel):
     )
 
     def to_dict(self) -> Dict[str, Any]:
+        trend_val = self.risk_trend.value if isinstance(self.risk_trend, RiskTrend) else str(self.risk_trend)
         return {
             "risk_level": self.risk_level.value,
             "risk_score": self.risk_score,
+            "risk_trend": trend_val,
+            "forecasted_peak_score": self.forecasted_peak_score,
+            "forecasted_peak_window": self.forecasted_peak_window,
             "primary_factors": self.primary_factors,
             "evaluated_at": self.evaluated_at,
         }

@@ -2,6 +2,7 @@
 
 from .models import (
     RiskLevel,
+    RiskTrend,
     EvidenceChunkMetadata,
     EvidenceChunk,
     RetrievalResultItem,
@@ -11,9 +12,11 @@ from .models import (
     RiskKnowledgeResponse,
 )
 from .risk_model import LocalRiskModel
+from .risk_service import RiskKnowledgeService
 
 __all__ = [
     "RiskLevel",
+    "RiskTrend",
     "EvidenceChunkMetadata",
     "EvidenceChunk",
     "RetrievalResultItem",
@@ -22,4 +25,5 @@ __all__ = [
     "RouteInfo",
     "RiskKnowledgeResponse",
     "LocalRiskModel",
+    "RiskKnowledgeService",
 ]
