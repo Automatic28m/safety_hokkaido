@@ -13,7 +13,6 @@ const SWATCH = {
 const inputCls = "w-full border-2 border-black rounded-xl px-3 py-2 bg-white text-black outline-none focus:border-orange-500";
 const POS_KEY = { origin: "originPos", destination: "destPos" };
 
-// Nearest named place for a position (goes through our own /api/geocode proxy)
 async function reverseName(pos) {
   try {
     const res = await fetch(`/api/geocode?lat=${pos.lat}&lng=${pos.lng}`);
@@ -25,27 +24,36 @@ async function reverseName(pos) {
   return `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`;
 }
 
-// Text input with place suggestions + "use my location" button
 function LocationInput({ value, onType, onPick, onLocate, locating, placeholder, locateTitle, unavailableText }) {
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const wrapperRef = useRef(null);
+  const timerRef = useRef(null);
+  const abortRef = useRef(null);
 
-  // Close the dropdown when clicking elsewhere
   useEffect(() => {
     const onDown = (e) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  // Suggestions only while the user is typing (picking / dragging / GPS fill the field without reopening it)
-  useEffect(() => {
-    if (!isOpen || !value || value.trim().length < 2) { setSuggestions([]); return; }
-    const ctl = new AbortController();
-    const timer = setTimeout(async () => {
+  const handleType = (val) => {
+    onType(val);
+    setIsOpen(true);
+    
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (abortRef.current) abortRef.current.abort();
+
+    if (!val || val.trim().length < 2) { 
+      setSuggestions([]); 
+      return; 
+    }
+    
+    timerRef.current = setTimeout(async () => {
+      abortRef.current = new AbortController();
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(value.trim())}`, { signal: ctl.signal });
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(val.trim())}`, { signal: abortRef.current.signal });
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
         setSuggestions(data.places || []);
@@ -54,8 +62,7 @@ function LocationInput({ value, onType, onPick, onLocate, locating, placeholder,
         if (err.name !== "AbortError") { setSuggestions([]); setFailed(true); }
       }
     }, 400);
-    return () => { clearTimeout(timer); ctl.abort(); };
-  }, [value, isOpen]);
+  };
 
   const pick = (s) => { onPick(s); setIsOpen(false); setSuggestions([]); setFailed(false); };
 
@@ -67,7 +74,7 @@ function LocationInput({ value, onType, onPick, onLocate, locating, placeholder,
           className="w-full border-2 border-black rounded-xl pl-3 pr-10 py-2 bg-white text-black outline-none focus:border-[#0047b3] transition-colors disabled:bg-gray-100"
           value={value}
           disabled={locating}
-          onChange={(e) => { onType(e.target.value); setIsOpen(true); }}
+          onChange={(e) => handleType(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && isOpen && suggestions[0]) { e.preventDefault(); pick(suggestions[0]); } }}
           placeholder={placeholder}
           maxLength={200}
@@ -113,21 +120,14 @@ export default function TripPlanner({ mode = "train" }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
-  const [locating, setLocating] = useState(null); // "origin" | "destination" | null
-  const [fitTick, setFitTick] = useState(0); // bumps when the map should fly to the pins
+  const [locating, setLocating] = useState(null); 
+  const [fitTick, setFitTick] = useState(0); 
   const [visible, setVisible] = useState({ normal: true, safe: true });
   const [focusId, setFocusId] = useState(null);
-
-  // New results (from the form or from the chat) start fully visible
-  useEffect(() => {
-    setVisible({ normal: true, safe: true });
-    setFocusId(null);
-  }, [result]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
   const swap = () => setForm((f) => ({ ...f, origin: f.destination, destination: f.origin, originPos: f.destPos, destPos: f.originPos }));
 
-  // Typing clears the pin (text no longer matches it); picking a suggestion / GPS sets text + pin
   const update = (which, text, pos) => setForm((f) => ({ ...f, [which]: text, [POS_KEY[which]]: pos }));
   const onType = (which) => (text) => update(which, text, null);
   const onPick = (which) => (place) => {
@@ -136,10 +136,9 @@ export default function TripPlanner({ mode = "train" }) {
     setInfo(null);
   };
 
-  // Pin dragged on the map: keep the exact position and show the nearest named place in the field
   const onPinMove = async (which, pos) => {
     setForm((f) => ({ ...f, [POS_KEY[which]]: pos }));
-    setResult(null); // old routes no longer match the pins
+    setResult(null); 
     setInfo(t("pinMoved"));
     const name = await reverseName(pos);
     setForm((f) => ({ ...f, [which]: name }));
@@ -177,13 +176,17 @@ export default function TripPlanner({ mode = "train" }) {
           origin: form.origin, destination: form.destination, mode, locale,
           origin_coords: form.originPos, destination_coords: form.destPos,
           datetime: form.date && form.time ? `${form.date}T${form.time}` : null,
-          preferences: { priority: form.priority, avoid_mountain: form.avoidMountain },
+          preferences: { priority: form.priority, avoidMountain: form.avoidMountain },
         }),
         signal: ctl.signal,
       });
       if (!res.ok) return setError(res.status === 404 ? t("errorNotFound") : res.status === 400 ? t("errorInput") : t("errorUnavailable"));
       const data = await res.json();
       if (!applyBackendTrip(data)) return setError(t("errorNoRoute"));
+      
+      // Reset visibility and focus when new results arrive
+      setVisible({ normal: true, safe: true });
+      setFocusId(null);
     } catch (err) {
       setError(err.name === "AbortError" ? t("errorTimeout") : t("errorUnavailable"));
     } finally {

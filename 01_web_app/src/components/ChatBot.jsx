@@ -23,20 +23,15 @@ export default function ChatBot({ isOpen, onClose }) {
   const t = useTranslations('Chat');
   const locale = useLocale();
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => [
+    { role: 'ai', content: t('greeting'), timestamp: now() }
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const [serviceStatus, setServiceStatus] = useState(null);
   const { conversationId, form, applyBackendTrip } = useTrip();
   const pathname = usePathname();
   const router = useRouter();
   const messagesEndRef = useRef(null);
-
-  // Greeting follows the current locale
-  useEffect(() => {
-    setMessages((prev) =>
-      prev.length <= 1 ? [{ role: 'ai', content: t('greeting'), timestamp: now() }] : prev
-    );
-  }, [locale, t]);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -68,13 +63,11 @@ export default function ChatBot({ isOpen, onClose }) {
     setInput('');
     setIsLoading(true);
 
-    // Recent history is still sent because the current backend (/ask) is stateless; conversation_id serves the new contract
     const history = messages
       .filter((m) => !m.isError)
       .slice(-20)
       .map((m) => ({ role: m.role, content: m.content }));
 
-    // Current trip form, so the backend can re-plan routes from what the user says in the chat
     const hasTrip = form.origin.trim() || form.destination.trim();
     const tripContext = hasTrip
       ? {
@@ -103,17 +96,18 @@ export default function ChatBot({ isOpen, onClose }) {
       });
 
       if (!res.ok) {
-        // Never hide backend failures behind a fake answer
         pushAi({ content: res.status === 503 ? t('errorUnavailable') : t('errorGeneric'), isError: true });
         return;
       }
 
       const data = await res.json();
       if (data.service_status) setServiceStatus(data.service_status);
-      // The backend decides the routes; we only draw them on the map
+      
+      const msgId = data.message_id || crypto.randomUUID();
       const routesUpdated = applyBackendTrip(data, { syncForm: true });
+      
       pushAi({
-        id: data.message_id || `${Date.now()}`,
+        id: msgId,
         content: data.answer ?? data.reply ?? t('errorGeneric'),
         safetyLevel: LEVEL_STYLE[data.safety_level] ? data.safety_level : null,
         degraded: data.status === 'degraded',
@@ -165,11 +159,8 @@ export default function ChatBot({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Blurred Backdrop */}
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90]" onClick={onClose} aria-hidden="true" />
-
       <div className="fixed top-6 bottom-8 left-[5%] right-[5%] sm:top-1/2 sm:left-1/2 sm:bottom-auto sm:right-auto sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[90vw] sm:max-w-5xl sm:h-[90vh] bg-white rounded-3xl shadow-2xl z-[100] flex flex-col overflow-hidden">
-        {/* Header */}
         <div className="bg-gradient-to-b from-[#0c59cc] to-[#1bb38e] pt-6 pb-5 px-6 flex items-center justify-between relative shrink-0 shadow-md z-10">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -191,7 +182,6 @@ export default function ChatBot({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Data source status lights (from backend service_status) */}
         <div className="shrink-0 flex flex-wrap gap-x-4 gap-y-1 px-6 py-2 bg-white border-b border-gray-200 text-xs text-gray-600" aria-label={t('servicesTitle')}>
           {SERVICES.map((k) => {
             const st = serviceStatus?.[k];
@@ -204,7 +194,6 @@ export default function ChatBot({ isOpen, onClose }) {
           })}
         </div>
 
-        {/* Chat Area */}
         <div className="flex-1 p-4 overflow-y-auto overscroll-none bg-gray-50 flex flex-col gap-6">
           {messages.map((msg, index) => (
             <div key={index} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -298,11 +287,9 @@ export default function ChatBot({ isOpen, onClose }) {
               ))}
             </div>
           )}
-
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
         <div className="p-4 bg-gray-50 shrink-0 pb-8 sm:pb-4">
           <form onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-full flex items-center px-3 py-2 gap-3 shadow-sm">
             <input
