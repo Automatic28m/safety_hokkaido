@@ -6,7 +6,7 @@ from risk_knowledge.rerankers import Reranker
 from decision_engine.generator import Generator
 from external_data.tools import get_real_time_weather, get_disaster_warnings, check_train_status
 from agent_core.query_transform import QueryTransformer
-from agent_core.memory import global_memory
+from agent_core.memory import ConversationMemory
 from agent_core.router import Router
 from config import config
 
@@ -30,12 +30,26 @@ class RAGPipeline:
 
     def ask_structured(self, request: dict) -> dict:
         query = request["original_query"]
-        chat_history = request.get("chat_history")
+        raw_history = request.get("chat_history") or []
         enabled_agents = request.get("enabled_agents")
+
+        # Exclude the last message if it's the current query to avoid duplication
+        if raw_history and raw_history[-1].get("role") == "user" and raw_history[-1].get("content") == query:
+            past_history = raw_history[:-1]
+        else:
+            past_history = raw_history
 
         # ── MEMORY: load conversation history ───────────────────────────────
         if config.USE_MEMORY:
-            chat_history = global_memory.get_history()
+            mem = ConversationMemory()
+            for m in past_history:
+                if m.get("role") == "user":
+                    mem.add_user_message(m.get("content", ""))
+                else:
+                    mem.add_ai_message(m.get("content", ""))
+            chat_history = mem.get_history()
+        else:
+            chat_history = past_history
 
         # ── DL06 ROUTER: classify intent before doing any heavy work ────────
         route_result = self.router.classify(query, chat_history)
@@ -91,11 +105,6 @@ class RAGPipeline:
         messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
         json_string_from_groq = self._call_groq(messages)
         decision_dict = self.generator.parse_llm_response(json_string_from_groq)
-
-        # ── MEMORY: save exchange ────────────────────────────────────────────
-        if config.USE_MEMORY:
-            global_memory.add_user_message(query)
-            global_memory.add_ai_message(decision_dict["reply"])
 
         # ── RESULT: combine the decision with the chunks and live data for node 02 ──
         return {
