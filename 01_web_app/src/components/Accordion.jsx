@@ -9,6 +9,7 @@ export default function Accordion({ title, children }) {
     <div className={`bg-green-700 text-white rounded-2xl shadow-md transition-all duration-300 ${isOpen ? 'p-5' : 'py-3 px-6'}`}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         className="w-full flex justify-between items-center font-bold text-lg focus:outline-none"
       >
         <span className="text-left">{title}</span>
@@ -23,6 +24,7 @@ export default function Accordion({ title, children }) {
       </button>
       
       <div 
+        inert={!isOpen}
         className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[800px] mt-4 opacity-100' : 'max-h-0 opacity-0'}`}
       >
         <div className="text-white">
