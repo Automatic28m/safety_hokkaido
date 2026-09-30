@@ -125,5 +125,3 @@ class ConversationMemory:
             )
 
 
-# Global memory instance shared across the entire backend session
-global_memory = ConversationMemory()

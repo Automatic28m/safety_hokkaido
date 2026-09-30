@@ -1,9 +1,12 @@
+import requests
+
 from data_integration.embedding_model import EmbeddingModel
 from risk_knowledge.hybrid_retriever import HybridRetriever
 from risk_knowledge.rerankers import Reranker
 from decision_engine.generator import Generator
+from external_data.tools import get_real_time_weather, get_disaster_warnings, check_train_status
 from agent_core.query_transform import QueryTransformer
-from agent_core.memory import global_memory
+from agent_core.memory import ConversationMemory
 from agent_core.router import Router
 from config import config
 
@@ -25,11 +28,28 @@ class RAGPipeline:
         self.router = Router()          # DL06: AI Router / Agent
         print("RAG Pipeline is online and ready!")
 
-    def ask(self, query: str, chat_history=None, enabled_agents=None):
+    def ask_structured(self, request: dict) -> dict:
+        query = request["original_query"]
+        raw_history = request.get("chat_history") or []
+        enabled_agents = request.get("enabled_agents")
+
+        # Exclude the last message if it's the current query to avoid duplication
+        if raw_history and raw_history[-1].get("role") == "user" and raw_history[-1].get("content") == query:
+            past_history = raw_history[:-1]
+        else:
+            past_history = raw_history
 
         # ── MEMORY: load conversation history ───────────────────────────────
         if config.USE_MEMORY:
-            chat_history = global_memory.get_history()
+            mem = ConversationMemory()
+            for m in past_history:
+                if m.get("role") == "user":
+                    mem.add_user_message(m.get("content", ""))
+                else:
+                    mem.add_ai_message(m.get("content", ""))
+            chat_history = mem.get_history()
+        else:
+            chat_history = past_history
 
         # ── DL06 ROUTER: classify intent before doing any heavy work ────────
         route_result = self.router.classify(query, chat_history)
@@ -72,17 +92,47 @@ class RAGPipeline:
                 if not enabled_agents[key]:
                     active_agents[key] = False
 
-        # ── GENERATE: send chunks + history to Groq ─────────────────────────
-        if config.USE_MEMORY:
-            full_history = global_memory.get_history() + [{"role": "user", "content": query}]
-        else:
-            full_history = chat_history if chat_history else [{"role": "user", "content": query}]
+        # ── LIVE DATA: node 03 runs the node 04 tools itself ────────────────
+        live_data_list = []
+        if active_agents.get("weather"):
+            live_data_list.append(get_real_time_weather("Sapporo"))
+        if active_agents.get("disaster"):
+            live_data_list.append(get_disaster_warnings())
+        if active_agents.get("train"):
+            live_data_list.append(check_train_status("All"))
 
-        answer = self.generator.generate(query, final_chunks, full_history, active_agents)
+        # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
+        messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
+        json_string_from_groq = self._call_groq(messages)
+        decision_dict = self.generator.parse_llm_response(json_string_from_groq)
 
-        # ── MEMORY: save exchange ────────────────────────────────────────────
-        if config.USE_MEMORY:
-            global_memory.add_user_message(query)
-            global_memory.add_ai_message(answer)
+        # ── RESULT: combine the decision with the chunks and live data for node 02 ──
+        return {
+            "reply": decision_dict["reply"],
+            "safety_level": decision_dict["safety_level"],
+            "evidence": [chunk.to_dict() for chunk in final_chunks],
+            "live_sources": [snapshot.to_dict() for snapshot in live_data_list],
+            "degraded": decision_dict["degraded"],
+            "notices": decision_dict["notices"],
+        }
 
-        return answer
+    def ask(self, query: str, chat_history=None, enabled_agents=None):
+        return self.ask_structured({
+            "original_query": query,
+            "chat_history": chat_history,
+            "enabled_agents": enabled_agents,
+        })["reply"]
+
+    def _call_groq(self, messages: list) -> str:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {config.GROQ_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": config.LLM_MODEL,
+                "messages": messages,
+            },
+        )
+        return response.json()["choices"][0]["message"]["content"]
