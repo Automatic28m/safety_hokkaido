@@ -1,8 +1,11 @@
 import requests
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from external_data.models import LiveDataSnapshot
 from external_data.cache import global_cache, utc_now_iso
 from external_data.validation import validate_region
+
+Tuple_Quake_Result = Tuple[bool, Optional[List[Dict[str, Any]]], Optional[str]]
+Tuple_Warning_Result = Tuple[bool, Optional[Dict[str, Any]], Optional[str]]
 
 DISASTER_PROVIDER = "jma"
 DISASTER_KIND = "disaster"
@@ -100,9 +103,6 @@ def _fetch_office_warnings(office_code: str) -> Tuple_Warning_Result:
         "headline": headline if headline else None
     }, None
 
-
-Tuple_Quake_Result = Any
-Tuple_Warning_Result = Any
 
 
 def fetch_disaster_warnings(region: str = "Hokkaido") -> LiveDataSnapshot:
