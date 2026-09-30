@@ -62,7 +62,7 @@ export async function POST(req) {
         language: locale === 'th' ? 'th' : 'en',
         messages: Array.isArray(messages) ? messages.slice(-21) : [{ role: 'user', content: message }],
         trip_context: trip_context && typeof trip_context === 'object' ? trip_context : null,
-        enabled_agents: { weather: true, disaster: true },
+        enabled_agents: { weather: true, disaster: true, train: true },
       }),
       signal: ctl.signal,
     });
