@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useTranslations, useLocale } from 'next-intl';
+import { usePathname, useRouter } from 'next/navigation';
+import { useTrip } from './TripContext';
 
 const LEVEL_STYLE = {
   SAFE: 'bg-green-700',
@@ -24,13 +26,10 @@ export default function ChatBot({ isOpen, onClose }) {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [serviceStatus, setServiceStatus] = useState(null);
-  const [conversationId, setConversationId] = useState(null);
+  const { conversationId, form, applyBackendTrip } = useTrip();
+  const pathname = usePathname();
+  const router = useRouter();
   const messagesEndRef = useRef(null);
-
-  // Created client-side only (avoids hydration mismatch). Memory on the backend is keyed by this id.
-  useEffect(() => {
-    setConversationId(crypto.randomUUID());
-  }, []);
 
   // Greeting follows the current locale
   useEffect(() => {
@@ -75,6 +74,17 @@ export default function ChatBot({ isOpen, onClose }) {
       .slice(-20)
       .map((m) => ({ role: m.role, content: m.content }));
 
+    // Current trip form, so the backend can re-plan routes from what the user says in the chat
+    const hasTrip = form.origin.trim() || form.destination.trim();
+    const tripContext = hasTrip
+      ? {
+          origin: form.origin, destination: form.destination,
+          origin_coords: form.originPos, destination_coords: form.destPos,
+          datetime: form.date && form.time ? `${form.date}T${form.time}` : null,
+          preferences: { priority: form.priority, avoid_mountain: form.avoidMountain },
+        }
+      : null;
+
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 58000);
 
@@ -87,6 +97,7 @@ export default function ChatBot({ isOpen, onClose }) {
           message: text,
           locale,
           messages: [...history, { role: 'user', content: text }],
+          trip_context: tripContext,
         }),
         signal: ctl.signal,
       });
@@ -99,12 +110,15 @@ export default function ChatBot({ isOpen, onClose }) {
 
       const data = await res.json();
       if (data.service_status) setServiceStatus(data.service_status);
+      // The backend decides the routes; we only draw them on the map
+      const routesUpdated = applyBackendTrip(data, { syncForm: true });
       pushAi({
         id: data.message_id || `${Date.now()}`,
         content: data.answer ?? data.reply ?? t('errorGeneric'),
         safetyLevel: LEVEL_STYLE[data.safety_level] ? data.safety_level : null,
         degraded: data.status === 'degraded',
         sources: Array.isArray(data.sources_used) ? data.sources_used : [],
+        routesUpdated,
       });
     } catch (error) {
       console.error('Chat Error:', error);
@@ -121,6 +135,11 @@ export default function ChatBot({ isOpen, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     send(input);
+  };
+
+  const goToMap = () => {
+    onClose();
+    if (!pathname.includes('/transportation')) router.push(`/${locale}/transportation/train`);
   };
 
   const sendFeedback = async (index, rating) => {
@@ -217,6 +236,12 @@ export default function ChatBot({ isOpen, onClose }) {
                     )}
                     {msg.sources?.length > 0 && (
                       <p className="mt-2 text-xs text-gray-500">{t('sources')}: {msg.sources.map(sourceLabel).join(', ')}</p>
+                    )}
+                    {msg.routesUpdated && (
+                      <div className="mt-3 rounded-xl bg-green-50 border border-green-200 p-3 text-sm text-green-900">
+                        <p>🗺️ {t('routesUpdated')}</p>
+                        <button type="button" onClick={goToMap} className="mt-2 font-bold underline">{t('viewMap')}</button>
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2.5 ml-2">

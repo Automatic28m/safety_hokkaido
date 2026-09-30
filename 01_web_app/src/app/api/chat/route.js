@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { buildMockTrip } from '@/lib/mockTrip';
 
 export const maxDuration = 60;
 
@@ -15,7 +16,7 @@ export async function POST(req) {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
 
-  const { conversation_id, message, locale, messages } = body ?? {};
+  const { conversation_id, message, locale, messages, trip_context } = body ?? {};
   if (typeof message !== 'string' || !message.trim() || message.length > 2000 || typeof conversation_id !== 'string') {
     return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
   }
@@ -31,14 +32,22 @@ export async function POST(req) {
       AVOID_TRAVEL: th ? '[ข้อมูลจำลอง] ตรวจพบแผ่นดินไหวรุนแรง หลีกเลี่ยงการเดินทางและไปศูนย์อพยพ' : '[MOCK] Strong earthquake detected. Avoid travel and go to a shelter.',
     }[level];
     await new Promise((r) => setTimeout(r, 800));
-    return NextResponse.json({
+    const base = {
       message_id: `mock-${Date.now()}`,
       answer: text,
       safety_level: level,
       status: level === 'WARNING' ? 'degraded' : 'ok',
       sources_used: ['Mock data'],
       service_status: { weather: 'ok', train: level === 'WARNING' ? 'down' : 'ok', flight: 'ok', traffic: 'ok' },
-    });
+    };
+    // Demo: a route-related question with a filled trip form returns new routes, like the real backend should
+    let tripPart = {};
+    const tc = trip_context;
+    if (tc?.origin && tc?.destination && /route|เส้นทาง|avoid|เลี่ยง|snow|หิมะ|detour/i.test(message)) {
+      const r = await buildMockTrip(String(tc.origin), String(tc.destination), th ? 'th' : 'en', { origin: tc.origin_coords, destination: tc.destination_coords });
+      if (r.status === 200) tripPart = { ...r.body, trip: { origin: tc.origin, destination: tc.destination, datetime: tc.datetime, preferences: { ...(tc.preferences || {}), avoid_mountain: true } } };
+    }
+    return NextResponse.json({ ...base, ...tripPart });
   }
 
   const ctl = new AbortController();
@@ -52,6 +61,7 @@ export async function POST(req) {
         message,
         language: locale === 'th' ? 'th' : 'en',
         messages: Array.isArray(messages) ? messages.slice(-21) : [{ role: 'user', content: message }],
+        trip_context: trip_context && typeof trip_context === 'object' ? trip_context : null,
         enabled_agents: { weather: true, disaster: true },
       }),
       signal: ctl.signal,
