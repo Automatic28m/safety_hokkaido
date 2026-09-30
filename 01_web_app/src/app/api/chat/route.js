@@ -68,9 +68,9 @@ export async function POST(req) {
     });
 
     let data = null;
-    try { data = await upstream.json(); } catch { /* non-JSON body */ }
+    try { data = await upstream.json(); } catch { /* non-JSON  body */ }
 
-    // Real status is passed through; a backend failure is never returned as HTTP 200
+    // Real status is passed through; a backend failure is never returned as  HTTP 200
     if (!upstream.ok || !data) {
       return NextResponse.json({ error: 'backend_error' }, { status: upstream.ok ? 502 : upstream.status });
     }
