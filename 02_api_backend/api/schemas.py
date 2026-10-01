@@ -10,8 +10,6 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-ROUTES = {"general", "rag", "realtime", "rag+realtime"}
-
 
 class Role(str, Enum):
     USER = "user"
@@ -82,11 +80,21 @@ class NormalizedAskRequest(BaseModel):
     input_mode: str
 
 
+class RouteIntent(BaseModel):
+    """Structured travel intent so the frontend can render a map, instead of free text."""
+
+    model_config = ConfigDict(strict=True)
+
+    origin: str
+    destination: str
+    mode: str
+
+
 class AskResponse(BaseModel):
     reply: str
     request_id: str
     status: str = "ok"
-    route: Optional[str] = None
+    route_intent: Optional[RouteIntent] = None
     degraded: bool = False
     notices: List[str] = Field(default_factory=list)
     evidence: List[Dict[str, Any]] = Field(default_factory=list)

@@ -7,9 +7,10 @@ from typing import Any, Callable, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from .errors import PipelineUnavailableError
-from .schemas import ROUTES, AskResponse, ChatRequest, ErrorResponse, NormalizedAskRequest
+from .schemas import AskResponse, ChatRequest, ErrorResponse, NormalizedAskRequest, RouteIntent
 
 logger = logging.getLogger("api_backend")
 
@@ -27,8 +28,9 @@ def _request_id(request: Request) -> str:
     return getattr(request.state, "request_id", None) or "unknown"
 
 
-def _mark_state(request: Request, route: Optional[str], degraded: bool) -> None:
-    request.state.route = route
+def _mark_state(request: Request, route_intent: Optional[RouteIntent], degraded: bool) -> None:
+    # Store presence only, never the origin/destination text, so logs stay content-free.
+    request.state.route = route_intent is not None
     request.state.degraded = degraded
 
 
@@ -113,9 +115,14 @@ def create_router(
 
                 reply = raw.get("reply")
 
-                route = raw.get("route")
-                if route not in ROUTES:
-                    route = None
+                raw_route_intent = raw.get("route_intent")
+                route_intent = None
+                if raw_route_intent is not None:
+                    try:
+                        route_intent = RouteIntent.model_validate(raw_route_intent, strict=True)
+                    except ValidationError:
+                        logger.warning("request_id=%s dropping malformed 'route_intent'", request_id)
+                        route_intent = None
 
                 degraded = bool(raw.get("degraded", False))
                 notices = raw.get("notices") or []
@@ -138,7 +145,7 @@ def create_router(
                     )
                 else:
                     reply = pipeline.ask(original_query, enabled_agents=enabled_agents)
-                status, route, degraded, notices, evidence, live_sources = (
+                status, route_intent, degraded, notices, evidence, live_sources = (
                     "ok",
                     None,
                     False,
@@ -156,12 +163,12 @@ def create_router(
             logger.error("request_id=%s pipeline returned a non-string reply", request_id)
             return _internal_error_response(request, request_id, "invalid_reply_type")
 
-        _mark_state(request, route, degraded)
+        _mark_state(request, route_intent, degraded)
         response_body = AskResponse(
             reply=reply,
             request_id=request_id,
             status=status,
-            route=route,
+            route_intent=route_intent,
             degraded=degraded,
             notices=notices,
             evidence=evidence,
