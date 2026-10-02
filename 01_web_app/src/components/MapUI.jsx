@@ -22,6 +22,7 @@ function boundsOf(lines) {
 export default function MapUI({
   routes = [], hazards = [], visible = {}, focusId = null,
   pins = {}, onPinMove, pinLabels = {}, fitTick = 0,
+  heightClass = "h-[380px] md:h-[480px]", draggablePins = true,
   noTokenText = "Map token is missing",
 }) {
   const mapRef = useRef(null);
@@ -54,7 +55,7 @@ export default function MapUI({
   const ordered = [...routes].sort((a) => (a.id === "safe" ? 1 : -1)); // safe route drawn on top
 
   return (
-    <div className="w-full h-[380px] md:h-[480px] rounded-xl overflow-hidden shadow-inner relative border-2 border-gray-300">
+    <div className={`w-full ${heightClass} rounded-xl overflow-hidden shadow-inner relative border-2 border-gray-300`}>
       <Map
         ref={mapRef}
         {...viewState}
@@ -97,7 +98,7 @@ export default function MapUI({
               key={key}
               longitude={pins[key].lng}
               latitude={pins[key].lat}
-              draggable
+              draggable={draggablePins}
               onDragEnd={(e) => onPinMove?.(key, { lat: e.lngLat.lat, lng: e.lngLat.lng })}
             >
               <div title={pinLabels[key]} className={`w-9 h-9 rounded-full ${bg} text-white font-bold text-lg border-[3px] border-white shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing`}>{letter}</div>

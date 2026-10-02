@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
+import StatusDots from './StatusDots';
 
 
 const NavAccordion = ({ title, children, defaultOpen = false }) => {
@@ -80,6 +81,7 @@ export default function Navbar() {
             <Link href={`/${locale}/transportation/train`} className={linkCls(`/${locale}/transportation`)}>{t('transportation')}</Link>
             <Link href={`/${locale}/learning-materials`} className={linkCls(`/${locale}/learning-materials`)}>{t('learningMaterials')}</Link>
           </nav>
+          <StatusDots className="hidden lg:flex ml-6 text-xs text-white/90" labelClass="hidden xl:inline" />
           {/* Desktop Lang Switcher (Hidden on mobile) */}
           <button onClick={toggleLanguage} aria-label="Language" className="hidden md:flex relative items-center justify-center w-10 h-10 hover:opacity-80 transition-opacity ml-8 mt-1">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -140,7 +142,9 @@ export default function Navbar() {
               </Link>
             </div>
 
-                        <nav className="space-y-2 text-lg">
+                        <StatusDots className="mb-6 text-sm" />
+
+            <nav className="space-y-2 text-lg">
               <div className="mb-6">
                 <Link href={`/${locale}`} onClick={() => setIsOpen(false)} className="font-bold text-xl hover:text-orange-300 transition-colors">{ts('top')}</Link>
               </div>

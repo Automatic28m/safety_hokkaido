@@ -7,15 +7,17 @@ import ReactMarkdown from 'react-markdown';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTrip } from './TripContext';
+import MapUI from './MapUI';
+import StatusDots from './StatusDots';
+import GoogleMapsButton from './GoogleMapsButton';
+import { requestTrip, geocodeFirst } from '@/lib/tripClient';
 
 const LEVEL_STYLE = {
-  SAFE: 'bg-green-700',
-  WARNING: 'bg-amber-500',
-  AVOID_TRAVEL: 'bg-red-600',
+  SAFE: 'bg-white text-gray-800 border border-gray-200',
+  WARNING: 'bg-white text-gray-800 border border-gray-200',
+  AVOID_TRAVEL: 'bg-white text-gray-800 border border-gray-200',
 };
 const LEVEL_ICON = { SAFE: '🟢', WARNING: '🟡', AVOID_TRAVEL: '🔴' };
-const SERVICES = ['weather', 'train', 'flight', 'traffic'];
-const DOT_STYLE = { ok: 'bg-green-500', degraded: 'bg-amber-400', down: 'bg-red-500' };
 
 const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -23,15 +25,24 @@ export default function ChatBot({ isOpen, onClose }) {
   const t = useTranslations('Chat');
   const locale = useLocale();
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState(() => [
-    { role: 'ai', content: t('greeting'), timestamp: now() }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [serviceStatus, setServiceStatus] = useState(null);
-  const { conversationId, form, applyBackendTrip } = useTrip();
+  const [mapOpen, setMapOpen] = useState(false); // map beside the chat, opened by route_intent / routes from the backend
+  const [fitTick, setFitTick] = useState(0);
+  const [panelLoading, setPanelLoading] = useState(false);
+  const [panelError, setPanelError] = useState(null);
+  const { conversationId, form, setForm, activeMode, setActiveMode, resultFor, applyBackendTrip, updateSources } = useTrip();
+  const ts = useTranslations('Trip');
   const pathname = usePathname();
   const router = useRouter();
   const messagesEndRef = useRef(null);
+
+  // Greeting follows the current locale
+  useEffect(() => {
+    setMessages((prev) =>
+      prev.length <= 1 ? [{ role: 'ai', content: t('greeting'), timestamp: now() }] : prev
+    );
+  }, [locale, t]);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -55,6 +66,37 @@ export default function ChatBot({ isOpen, onClose }) {
   const pushAi = (msg) =>
     setMessages((prev) => [...prev, { role: 'ai', timestamp: now(), ...msg }]);
 
+  // Backend asked for directions: pre-fill the form, drop A/B pins and show the map next to the chat
+  const openRouteIntent = async (intent, mode) => {
+    const o = typeof intent.origin === 'string' ? intent.origin.trim() : '';
+    const d = typeof intent.destination === 'string' ? intent.destination.trim() : '';
+    setActiveMode(mode);
+    setForm((f) => ({
+      ...f,
+      origin: o || f.origin, destination: d || f.destination,
+      originPos: o && o !== f.origin ? null : f.originPos,
+      destPos: d && d !== f.destination ? null : f.destPos,
+    }));
+    setMapOpen(true);
+    const [go, gd] = await Promise.all([o ? geocodeFirst(o) : null, d ? geocodeFirst(d) : null]);
+    setForm((f) => ({
+      ...f,
+      ...(go?.place ? { originPos: { lat: go.place.lat, lng: go.place.lng } } : {}),
+      ...(gd?.place ? { destPos: { lat: gd.place.lat, lng: gd.place.lng } } : {}),
+    }));
+    setFitTick((n) => n + 1);
+  };
+
+  const searchFromChat = async () => {
+    if (!form.origin.trim() || !form.destination.trim()) return setPanelError(ts('errorInput'));
+    setPanelLoading(true); setPanelError(null);
+    const out = await requestTrip({ form, setForm, mode: activeMode, locale, conversationId });
+    setPanelLoading(false);
+    if (out.error) return setPanelError(out.error === 'not_found' ? ts('errorNotFound') : out.error === 'timeout' ? ts('errorTimeout') : out.error === 'input' ? ts('errorInput') : ts('errorUnavailable'));
+    updateSources(out.data);
+    if (!applyBackendTrip(out.data, { mode: activeMode })) setPanelError(ts('errorNoRoute'));
+  };
+
   const send = async (raw) => {
     const text = raw.trim();
     if (!text || isLoading || !conversationId) return;
@@ -63,16 +105,19 @@ export default function ChatBot({ isOpen, onClose }) {
     setInput('');
     setIsLoading(true);
 
+    // Recent history is still sent because the current backend (/ask) is stateless; conversation_id serves the new contract
     const history = messages
       .filter((m) => !m.isError)
       .slice(-20)
       .map((m) => ({ role: m.role, content: m.content }));
 
+    // Current trip form, so the backend can re-plan routes from what the user says in the chat
     const hasTrip = form.origin.trim() || form.destination.trim();
     const tripContext = hasTrip
       ? {
           origin: form.origin, destination: form.destination,
           origin_coords: form.originPos, destination_coords: form.destPos,
+          mode: activeMode,
           datetime: form.date && form.time ? `${form.date}T${form.time}` : null,
           preferences: { priority: form.priority, avoid_mountain: form.avoidMountain },
         }
@@ -96,26 +141,32 @@ export default function ChatBot({ isOpen, onClose }) {
       });
 
       if (!res.ok) {
+        // Never hide backend failures behind a fake answer
+        updateSources({ live_sources: [], degraded: false }); // sources unknown -> shown as offline
         pushAi({ content: res.status === 503 ? t('errorUnavailable') : t('errorGeneric'), isError: true });
         return;
       }
 
       const data = await res.json();
-      if (data.service_status) setServiceStatus(data.service_status);
-      
-      const msgId = data.message_id || crypto.randomUUID();
-      const routesUpdated = applyBackendTrip(data, { syncForm: true });
-      
+      updateSources(data); // service_status or live_sources + degraded -> navbar / chat status dots
+      // The backend decides the routes; we only draw them on the map
+      const intent = data.route_intent && typeof data.route_intent === 'object' ? data.route_intent : null;
+      const routeMode = ['train', 'bus', 'car'].includes(data.mode) ? data.mode : ['train', 'bus', 'car'].includes(intent?.mode) ? intent.mode : activeMode;
+      const routesUpdated = applyBackendTrip(data, { syncForm: true, mode: routeMode });
+      const level = data.safety_level === 'urgent' ? 'AVOID_TRAVEL' : data.safety_level; // accept 'urgent' as an alias
+      if (intent) openRouteIntent(intent, routeMode);
+      else if (routesUpdated) setMapOpen(true);
       pushAi({
-        id: msgId,
+        id: data.message_id || `${Date.now()}`,
         content: data.answer ?? data.reply ?? t('errorGeneric'),
-        safetyLevel: LEVEL_STYLE[data.safety_level] ? data.safety_level : null,
+        safetyLevel: LEVEL_STYLE[level] ? level : null,
         degraded: data.status === 'degraded',
         sources: Array.isArray(data.sources_used) ? data.sources_used : [],
         routesUpdated,
       });
     } catch (error) {
       console.error('Chat Error:', error);
+      updateSources({ live_sources: [], degraded: false });
       pushAi({
         content: error.name === 'AbortError' ? t('errorTimeout') : t('errorUnavailable'),
         isError: true,
@@ -155,13 +206,23 @@ export default function ChatBot({ isOpen, onClose }) {
   const sourceLabel = (s) =>
     typeof s === 'string' ? s : `${s.name || s.id}${s.page ? ` (p.${s.page})` : ''}`;
 
+  // Whole chat window changes colour with the latest safety level
+  const lastLevel = [...messages].reverse().find((m) => m.role === 'ai' && m.safetyLevel)?.safetyLevel;
+  const tone = lastLevel === 'AVOID_TRAVEL' ? 'urgent' : lastLevel === 'WARNING' ? 'warning' : 'normal';
+  const headerCls = 'from-[#0c59cc] to-[#1bb38e]';
+  const areaCls = 'bg-gray-50 text-gray-800';
+  const panelResult = resultFor(activeMode);
+
   if (!isOpen) return null;
 
   return (
     <>
+      {/* Blurred Backdrop */}
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90]" onClick={onClose} aria-hidden="true" />
+
       <div className="fixed top-6 bottom-8 left-[5%] right-[5%] sm:top-1/2 sm:left-1/2 sm:bottom-auto sm:right-auto sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[90vw] sm:max-w-5xl sm:h-[90vh] bg-white rounded-3xl shadow-2xl z-[100] flex flex-col overflow-hidden">
-        <div className="bg-gradient-to-b from-[#0c59cc] to-[#1bb38e] pt-6 pb-5 px-6 flex items-center justify-between relative shrink-0 shadow-md z-10">
+        {/* Header */}
+        <div className={`bg-gradient-to-b ${headerCls} pt-6 pb-5 px-6 flex items-center justify-between relative shrink-0 shadow-md z-10`}>
           <div className="flex items-center gap-4">
             <div className="relative">
               <div className="w-[72px] h-[72px] relative bg-white rounded-full overflow-hidden shadow-sm border-[3px] border-white">
@@ -182,19 +243,39 @@ export default function ChatBot({ isOpen, onClose }) {
           </button>
         </div>
 
-        <div className="shrink-0 flex flex-wrap gap-x-4 gap-y-1 px-6 py-2 bg-white border-b border-gray-200 text-xs text-gray-600" aria-label={t('servicesTitle')}>
-          {SERVICES.map((k) => {
-            const st = serviceStatus?.[k];
-            return (
-              <span key={k} className="flex items-center gap-1.5">
-                <i className={`inline-block w-2.5 h-2.5 rounded-full ${DOT_STYLE[st] || 'bg-gray-300'}`} />
-                {t(`services.${k}`)}
-              </span>
-            );
-          })}
-        </div>
+        {/* Data source status dots (shared with the navbar) */}
+        <StatusDots className="shrink-0 px-6 py-2 bg-white border-b border-gray-200 text-xs text-gray-600" />
 
-        <div className="flex-1 p-4 overflow-y-auto overscroll-none bg-gray-50 flex flex-col gap-6">
+
+        {/* Body: chat column, plus a map panel when the backend sent route_intent / routes */}
+        <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+        {mapOpen && (
+          <div className="order-first md:order-last md:w-1/2 shrink-0 h-64 md:h-auto border-b md:border-b-0 md:border-l border-gray-200 bg-white flex flex-col gap-2 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={searchFromChat} disabled={panelLoading} className="bg-orange-400 hover:bg-orange-500 disabled:opacity-60 text-white text-sm font-bold rounded-xl px-4 py-2">
+                {panelLoading ? ts('searching') : ts('search')}
+              </button>
+              <GoogleMapsButton mode={activeMode} origin={form.origin} destination={form.destination} originPos={form.originPos} destPos={form.destPos} />
+              <button type="button" onClick={() => setMapOpen(false)} aria-label="Close map" className="ml-auto text-gray-500 hover:text-black px-2">✕</button>
+            </div>
+            {panelError && <p role="alert" className="text-xs text-red-700">{panelError}</p>}
+            <div className="flex-1 min-h-0">
+              <MapUI
+                routes={panelResult?.routes || []}
+                hazards={panelResult?.hazards || []}
+                pins={{ origin: form.originPos, destination: form.destPos }}
+                pinLabels={{ origin: ts('pinA'), destination: ts('pinB') }}
+                fitTick={fitTick}
+                heightClass="h-full min-h-[160px]"
+                draggablePins={false}
+                noTokenText={ts('noToken')}
+              />
+            </div>
+          </div>
+        )}
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col">
+        {/* Chat Area */}
+        <div className={`flex-1 p-4 overflow-y-auto overscroll-none flex flex-col gap-6 transition-colors ${areaCls}`}>
           {messages.map((msg, index) => (
             <div key={index} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'user' ? (
@@ -287,10 +368,12 @@ export default function ChatBot({ isOpen, onClose }) {
               ))}
             </div>
           )}
+
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="p-4 bg-gray-50 shrink-0 pb-8 sm:pb-4">
+        {/* Input Area */}
+        <div className={`p-4 shrink-0 pb-8 sm:pb-4 transition-colors ${areaCls}`}>
           <form onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-full flex items-center px-3 py-2 gap-3 shadow-sm">
             <input
               type="text"
@@ -312,6 +395,8 @@ export default function ChatBot({ isOpen, onClose }) {
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19 0-14" /><path d="m5 12 7-7 7 7" /></svg>
             </button>
           </form>
+        </div>
+        </div>
         </div>
       </div>
     </>
