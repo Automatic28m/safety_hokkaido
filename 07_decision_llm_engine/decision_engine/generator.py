@@ -26,6 +26,7 @@ You MUST output a strict JSON object (and nothing else) containing exactly the f
 - "used_live_sources": A list of strings containing the provider names of any Live Data you relied on.
 - "degraded": boolean (true if any provided dependency was unavailable or missing).
 - "notices": A list of strings explaining any data limitations to the user (e.g., "Train data is mocked", "Weather provider offline").
+- "route_intent": If the user asks for travel routes or directions, you MUST output an object containing "origin", "destination", and "mode" (train, bus, or car). Otherwise, output null.
 
 Context (Evidence & Live Data):
 {context}
@@ -38,6 +39,7 @@ class DecisionResponse(BaseModel if BaseModel is not object else object):
     used_live_sources: List[str]
     degraded: bool
     notices: List[str]
+    route_intent: Optional[dict] = None
 
 class Generator:
     """
@@ -101,6 +103,7 @@ class Generator:
                 used_live_sources = decision.used_live_sources
                 degraded = decision.degraded
                 notices = decision.notices
+                route_intent = decision.route_intent
             else:
                 reply = str(decision_dict.get("reply", ""))
                 safety_level = str(decision_dict.get("safety_level", "unknown"))
@@ -108,6 +111,7 @@ class Generator:
                 used_live_sources = list(decision_dict.get("used_live_sources", []))
                 degraded = bool(decision_dict.get("degraded", False))
                 notices = list(decision_dict.get("notices", []))
+                route_intent = decision_dict.get("route_intent", None)
             
             # 3. HTML/JS Sanitization (Strip tags)
             safe_reply = re.sub(r'<[^>]+>', '', reply)
@@ -118,7 +122,8 @@ class Generator:
                 "used_evidence_ids": used_evidence_ids,
                 "used_live_sources": used_live_sources,
                 "degraded": degraded,
-                "notices": notices
+                "notices": notices,
+                "route_intent": route_intent
             }
             
         except Exception as e:
@@ -134,5 +139,6 @@ class Generator:
             "used_evidence_ids": [],
             "used_live_sources": [],
             "degraded": True,
-            "notices": [f"Fallback activated: {reason}"]
+            "notices": [f"Fallback activated: {reason}"],
+            "route_intent": None
         }
