@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 export default async function EmergencyContactPage({ params }) {
   const { locale } = await params;
   const t = await getTranslations('EmergencyContact');
+  const ts = await getTranslations('Shell');
 
   return (
     <div className="flex flex-col items-center pb-10 bg-[#f4f7f6] pt-24">
@@ -24,7 +25,7 @@ export default async function EmergencyContactPage({ params }) {
               </div>
               <div>
                 <h2 className="text-gray-700 text-sm">{t('fireLabel')}</h2>
-                <p className="text-5xl font-black text-black tracking-wider">119</p>
+                <a href="tel:119" className="flex items-center gap-3 text-5xl font-black text-black tracking-wider hover:text-green-700 transition-colors">119<span className="text-xs font-bold tracking-normal text-white bg-green-700 rounded-full px-3 py-1">📞 {ts('call')}</span></a>
               </div>
             </div>
             <div className="border-b-2 border-dashed border-gray-300 mb-4"></div>
@@ -41,7 +42,7 @@ export default async function EmergencyContactPage({ params }) {
               </div>
               <div>
                 <h2 className="text-gray-700 text-sm">{t('policeLabel')}</h2>
-                <p className="text-5xl font-black text-black tracking-wider">110</p>
+                <a href="tel:110" className="flex items-center gap-3 text-5xl font-black text-black tracking-wider hover:text-green-700 transition-colors">110<span className="text-xs font-bold tracking-normal text-white bg-green-700 rounded-full px-3 py-1">📞 {ts('call')}</span></a>
               </div>
             </div>
             <div className="border-b-2 border-dashed border-gray-300 mb-4"></div>
@@ -66,7 +67,7 @@ export default async function EmergencyContactPage({ params }) {
               </div>
               <div>
                 <h2 className="text-gray-700 text-sm">{t('coastLabel')}</h2>
-                <p className="text-5xl font-black text-black tracking-wider">118</p>
+                <a href="tel:118" className="flex items-center gap-3 text-5xl font-black text-black tracking-wider hover:text-green-700 transition-colors">118<span className="text-xs font-bold tracking-normal text-white bg-green-700 rounded-full px-3 py-1">📞 {ts('call')}</span></a>
               </div>
             </div>
             <div className="border-b-2 border-dashed border-gray-300 mb-4"></div>

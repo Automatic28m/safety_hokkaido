@@ -357,7 +357,7 @@ def test_ask_structured_fields_are_forwarded():
         {
             "reply": "here is the forecast",
             "status": "ok",
-            "route": "rag+realtime",
+            "route_intent": {"origin": "Sapporo", "destination": "Otaru", "mode": "train"},
             "degraded": False,
             "notices": ["used_cache"],
             "evidence": [{"source": "doc1"}],
@@ -371,20 +371,38 @@ def test_ask_structured_fields_are_forwarded():
     assert resp.status_code == 200
     body = resp.json()
     assert body["reply"] == "here is the forecast"
-    assert body["route"] == "rag+realtime"
+    assert body["route_intent"] == {"origin": "Sapporo", "destination": "Otaru", "mode": "train"}
     assert body["notices"] == ["used_cache"]
     assert body["evidence"] == [{"source": "doc1"}]
     assert body["live_sources"] == [{"tool": "weather"}]
 
 
-def test_ask_structured_unknown_route_becomes_none():
-    pipeline = StructuredPipeline({"reply": "ok", "status": "ok", "route": "not-a-real-route"})
+def test_ask_structured_malformed_route_intent_becomes_none():
+    pipeline = StructuredPipeline(
+        {"reply": "ok", "status": "ok", "route_intent": {"origin": "Sapporo"}}
+    )
     client = TestClient(make_app(pipeline))
 
     resp = client.post("/ask", json={"message": "hi"})
 
     assert resp.status_code == 200
-    assert resp.json()["route"] is None
+    assert resp.json()["route_intent"] is None
+
+
+def test_ask_structured_route_intent_wrong_types_becomes_none():
+    pipeline = StructuredPipeline(
+        {
+            "reply": "ok",
+            "status": "ok",
+            "route_intent": {"origin": "Sapporo", "destination": "Otaru", "mode": 123},
+        }
+    )
+    client = TestClient(make_app(pipeline))
+
+    resp = client.post("/ask", json={"message": "hi"})
+
+    assert resp.status_code == 200
+    assert resp.json()["route_intent"] is None
 
 
 def test_ask_structured_malformed_evidence_is_dropped():
