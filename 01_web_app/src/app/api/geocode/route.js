@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
+import { hasThai, lookupThai } from '@/lib/thaiPlaces';
 
 // Server-side proxy for Mapbox geocoding: avoids browser "Failed to fetch" problems
 // (ad blockers, VPN/firewall, token URL restrictions) and keeps the request in one place.
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.MAPBOX_TOKEN;
 
 export async function GET(req) {
+  // Thai input is resolved from our own place list first (Mapbox does not index Thai names)
+  const thaiQuery = (req.nextUrl.searchParams.get('q') || '').trim().slice(0, 200);
+  if (hasThai(thaiQuery)) {
+    const local = lookupThai(thaiQuery);
+    if (local.length) return NextResponse.json({ places: local });
+  }
+
   if (!TOKEN) return NextResponse.json({ error: 'mapbox_token_missing' }, { status: 503 });
 
   const sp = req.nextUrl.searchParams;

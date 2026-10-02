@@ -18,7 +18,7 @@ export async function POST(req) {
   const locale = body?.locale === 'th' ? 'th' : 'en';
 
   if (process.env.MOCK_BACKEND === 'true') {
-    const r = await buildMockTrip(origin, destination, locale, { origin: posOf(body?.origin_coords), destination: posOf(body?.destination_coords) });
+    const r = await buildMockTrip(origin, destination, locale, { origin: posOf(body?.origin_coords), destination: posOf(body?.destination_coords) }, ['train', 'bus', 'car'].includes(body?.mode) ? body.mode : 'car');
     return NextResponse.json(r.body, { status: r.status });
   }
 

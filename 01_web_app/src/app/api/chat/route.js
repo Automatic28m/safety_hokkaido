@@ -38,13 +38,16 @@ export async function POST(req) {
       safety_level: level,
       status: level === 'WARNING' ? 'degraded' : 'ok',
       sources_used: ['Mock data'],
-      service_status: { weather: 'ok', train: level === 'WARNING' ? 'down' : 'ok', flight: 'ok', traffic: 'ok' },
+      live_sources: level === 'WARNING' ? ['weather', 'flight', 'traffic'] : ['weather', 'train', 'flight', 'traffic'],
+      degraded: level === 'WARNING',
     };
+    // Demo route_intent: asking about Otaru opens the map beside the chat with origin/destination pre-filled
+    if (/otaru|โอตารุ/i.test(message)) base.route_intent = { origin: th ? 'ซัปโปโร' : 'Sapporo Station', destination: th ? 'โอตารุ' : 'Otaru Station', mode: 'train' };
     // Demo: a route-related question with a filled trip form returns new routes, like the real backend should
     let tripPart = {};
     const tc = trip_context;
     if (tc?.origin && tc?.destination && /route|เส้นทาง|avoid|เลี่ยง|snow|หิมะ|detour/i.test(message)) {
-      const r = await buildMockTrip(String(tc.origin), String(tc.destination), th ? 'th' : 'en', { origin: tc.origin_coords, destination: tc.destination_coords });
+      const r = await buildMockTrip(String(tc.origin), String(tc.destination), th ? 'th' : 'en', { origin: tc.origin_coords, destination: tc.destination_coords }, ['train', 'bus', 'car'].includes(tc.mode) ? tc.mode : 'car');
       if (r.status === 200) tripPart = { ...r.body, trip: { origin: tc.origin, destination: tc.destination, datetime: tc.datetime, preferences: { ...(tc.preferences || {}), avoid_mountain: true } } };
     }
     return NextResponse.json({ ...base, ...tripPart });
@@ -68,9 +71,9 @@ export async function POST(req) {
     });
 
     let data = null;
-    try { data = await upstream.json(); } catch { /* non-JSON  body */ }
+    try { data = await upstream.json(); } catch { /* non-JSON body */ }
 
-    // Real status is passed through; a backend failure is never returned as  HTTP 200
+    // Real status is passed through; a backend failure is never returned as HTTP 200
     if (!upstream.ok || !data) {
       return NextResponse.json({ error: 'backend_error' }, { status: upstream.ok ? 502 : upstream.status });
     }
