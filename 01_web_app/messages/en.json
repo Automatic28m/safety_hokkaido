@@ -282,6 +282,7 @@
   },
   "Trip": {
     "from": "From", "to": "To", "date": "Date", "time": "Time", "swap": "Swap",
+    "googleMaps": "Navigate in Google Maps",
     "locate": "Use my current location", "locating": "Finding your location...",
     "errorGeoUnsupported": "Your browser doesn't support location services.",
     "errorGeoDenied": "Couldn't get your location. Please allow location access in your browser settings.",
@@ -306,5 +307,10 @@
     "errorNoRoute": "No route was returned. Please try different places or times.",
     "errorTimeout": "The server took too long to respond. Please try again.",
     "errorUnavailable": "Route service is temporarily unavailable. Please check official sources (JMA, JR Hokkaido) before travelling."
+  },
+  "Status": {
+    "title": "Data source status",
+    "services": { "weather": "Weather", "train": "JR trains", "flight": "Flights", "traffic": "Roads" },
+    "state": { "ok": "Active", "degraded": "Degraded", "down": "Offline", "unknown": "Unknown" }
   }
 }
