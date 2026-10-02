@@ -54,6 +54,7 @@ class RAGPipeline:
         # ── DL06 ROUTER: classify intent before doing any heavy work ────────
         route_result = self.router.classify(query, chat_history)
         route = route_result["route"]   # "general" | "rag" | "realtime" | "rag+realtime"
+        route_intent = route_result.get("route_intent")
 
         # ── DL05 QUERY REFORMULATION: make standalone if needed ─────────────
         if config.USE_MEMORY and chat_history:
@@ -114,6 +115,7 @@ class RAGPipeline:
             "live_sources": [snapshot.to_dict() for snapshot in live_data_list],
             "degraded": decision_dict["degraded"],
             "notices": decision_dict["notices"],
+            "route_intent": route_intent,
         }
 
     def ask(self, query: str, chat_history=None, enabled_agents=None):

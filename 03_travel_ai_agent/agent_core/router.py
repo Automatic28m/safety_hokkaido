@@ -25,10 +25,21 @@ Available routes:
                    (e.g. "Is it safe to drive to Otaru right now?", "Should I take the train given the earthquake warning?")
 
 You MUST reply with ONLY valid JSON and nothing else. No markdown, no explanation.
-Format: { "route": "<route>", "confidence": <0.0-1.0>, "reasoning": "<brief reason>" }
+Format: 
+{ 
+  "route": "<route>", 
+  "confidence": <0.0-1.0>, 
+  "reasoning": "<brief reason>",
+  "route_intent": {
+    "origin": "<start>",
+    "destination": "<end>",
+    "mode": "<train|bus|car>"
+  } 
+}
+(Note: If the user is NOT asking for directions, "route_intent" MUST be null.)
 
 Example:
-{ "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps." }
+{ "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps.", "route_intent": null }
 """
 
 # ---------------------------------------------------------------------------
@@ -129,6 +140,9 @@ class Router:
                     result["route"] = fallback_route
                     result["reasoning"] = "[Keyword fallback] Overrode low-confidence LLM route."
 
+            # Ensure route_intent is explicitly in the result
+            result["route_intent"] = result.get("route_intent", None)
+
             print(
                 f"[Router] Route='{result['route']}' | "
                 f"Confidence={result.get('confidence', '?')} | "
@@ -144,14 +158,16 @@ class Router:
                 return {
                     "route": fallback_route,
                     "confidence": 0.5,
-                    "reasoning": "Router error — rescued by keyword fallback."
+                    "reasoning": "Router error — rescued by keyword fallback.",
+                    "route_intent": None
                 }
             
             print("[Router] Defaulting to 'rag'.")
             return {
                 "route": "rag",
                 "confidence": 0.5,
-                "reasoning": "Router error — safe default to RAG."
+                "reasoning": "Router error — safe default to RAG.",
+                "route_intent": None
             }
 
     def _keyword_fallback(self, query: str) -> Optional[str]:
