@@ -124,12 +124,20 @@ class Router:
 
             content = raw["choices"][0]["message"]["content"]
 
-            # Robustly extract JSON even if model wraps it in markdown code fences
-            json_match = re.search(r'\{.*?\}', content, re.DOTALL)
-            if not json_match:
+            start_idx = content.find('{')
+            end_idx = content.rfind('}')
+            if start_idx == -1 or end_idx == -1:
                 raise ValueError(f"No JSON found in router response: {content}")
 
-            result = json.loads(json_match.group())
+            json_str = content[start_idx:end_idx+1]
+            
+            try:
+                result = json.loads(json_str)
+            except Exception as e:
+                print(f"[Router Error] Failed to parse JSON: {e}")
+                print(f"[Router Error] Raw string was: {json_str}")
+                raise
+
             print(f"[Router Debug] Raw LLM Output: {result}")
 
             if "route" not in result:
