@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTrip } from './TripContext';
+import MapUI from './MapUI';
 
 const LEVEL_STYLE = {
   SAFE: 'bg-green-700',
@@ -24,10 +25,40 @@ export default function ChatBot({ isOpen, onClose }) {
   const locale = useLocale();
   const [input, setInput] = useState('');
     const [currentRouteIntent, setCurrentRouteIntent] = useState(null);
+  const [mapData, setMapData] = useState(null);
+  const [isMapLoading, setIsMapLoading] = useState(false);
   const [messages, setMessages] = useState(() => [
     { role: 'ai', content: t('greeting'), timestamp: now() }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!currentRouteIntent) return;
+    const fetchRoute = async () => {
+      setIsMapLoading(true);
+      try {
+        const res = await fetch('/api/trip/route', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origin: currentRouteIntent.origin,
+            destination: currentRouteIntent.destination,
+            mode: currentRouteIntent.mode,
+            locale: locale
+          })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setMapData(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch map data", err);
+      } finally {
+        setIsMapLoading(false);
+      }
+    };
+    fetchRoute();
+  }, [currentRouteIntent, locale]);
   const [serviceStatus, setServiceStatus] = useState(null);
   const { conversationId, form, applyBackendTrip } = useTrip();
   const pathname = usePathname();
@@ -334,29 +365,53 @@ export default function ChatBot({ isOpen, onClose }) {
           </div>
 
           {currentRouteIntent && (
-            <div className="w-1/2 flex flex-col bg-white overflow-hidden">
+            <div className="w-1/2 flex flex-col bg-white overflow-hidden relative">
               <div className="p-4 flex justify-between items-center bg-gray-50 border-b border-gray-200 shrink-0">
-                <h3 className="font-bold text-[#0c4ca3] text-lg">
-                  📍 {currentRouteIntent.origin} ➔ {currentRouteIntent.destination}
-                </h3>
-                <a 
-                  href={getGoogleMapsUrl(currentRouteIntent.origin, currentRouteIntent.destination, currentRouteIntent.mode)}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-full shadow hover:bg-blue-700 text-sm font-semibold flex items-center gap-2 transition-colors"
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-bold text-[#0c4ca3] text-lg">
+                    📍 {currentRouteIntent.origin} ➔ {currentRouteIntent.destination}
+                  </h3>
+                  <a 
+                    href={getGoogleMapsUrl(currentRouteIntent.origin, currentRouteIntent.destination, currentRouteIntent.mode)}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-blue-600 text-white px-4 py-2 w-fit rounded-full shadow hover:bg-blue-700 text-sm font-semibold flex items-center gap-2 transition-colors"
+                  >
+                    🗺️ Navigate in Google Maps
+                  </a>
+                </div>
+                <button 
+                    onClick={() => setCurrentRouteIntent(null)}
+                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 hover:text-red-500 transition-colors"
+                    aria-label="Close Map"
                 >
-                  🗺️ Navigate in Google Maps
-                </a>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
               </div>
               <div className="flex-1 w-full relative">
-                {/* Notice: A generic Google Maps embedded frame can also be used here if MapBox doesn't render string origins */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-blue-50/50">
-                  <div className="text-4xl mb-4">🗺️</div>
-                  <h4 className="text-lg font-bold text-gray-800 mb-2">Ready to Navigate</h4>
-                  <p className="text-gray-600 max-w-sm mb-6">
-                    We have identified your travel route. Click the button above to open real-time navigation in Google Maps.
-                  </p>
-                </div>
+                {isMapLoading ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+                    <div className="w-8 h-8 border-4 border-[#0c4ca3] border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p className="text-gray-500 font-medium">Loading Map...</p>
+                  </div>
+                ) : mapData && mapData.routes ? (
+                  <MapUI 
+                      routes={mapData.routes} 
+                      hazards={mapData.hazards || []} 
+                      pins={{ 
+                          origin: mapData.origin, 
+                          destination: mapData.destination 
+                      }} 
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-blue-50/50">
+                    <div className="text-4xl mb-4">🗺️</div>
+                    <h4 className="text-lg font-bold text-gray-800 mb-2">Ready to Navigate</h4>
+                    <p className="text-gray-600 max-w-sm mb-6">
+                      We have identified your travel route. Click the button above to open real-time navigation in Google Maps.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
