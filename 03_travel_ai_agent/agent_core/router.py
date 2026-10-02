@@ -31,12 +31,12 @@ Format:
   "confidence": <0.0-1.0>, 
   "reasoning": "<brief reason>",
   "route_intent": {
-    "origin": "<start>",
-    "destination": "<end>",
+    "origin": "<start in English>",
+    "destination": "<end in English>",
     "mode": "<train|bus|car>"
   } 
 }
-(Note: If the user is NOT asking for directions, "route_intent" MUST be null. But if they mention any travel from A to B, you MUST extract it even if route is "general" or "realtime".)
+(Note: If the user mentions travel from A to B, you MUST extract it and translate origin/destination to ENGLISH to ensure maps work correctly. Example: "โอตารุ" -> "Otaru". If no travel is mentioned, route_intent MUST be null.)
 
 Example 1 (No directions):
 { "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps.", "route_intent": null }
