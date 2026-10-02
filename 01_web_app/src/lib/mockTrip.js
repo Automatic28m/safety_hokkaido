@@ -12,9 +12,9 @@ async function geocode(q) {
   const f = d.features?.[0];
   return f ? { lng: f.center[0], lat: f.center[1], label: f.place_name } : null;
 }
-async function directions(coords, alternatives) {
+async function directions(coords, alternatives, extra = '') {
   const path = coords.map((c) => c.join(',')).join(';');
-  const d = await mb(`https://api.mapbox.com/directions/v5/mapbox/driving/${path}?geometries=geojson&overview=full&alternatives=${alternatives}&access_token=${TOKEN}`);
+  const d = await mb(`https://api.mapbox.com/directions/v5/mapbox/driving/${path}?geometries=geojson&overview=full&alternatives=${alternatives}${extra}&access_token=${TOKEN}`);
   return d.routes || [];
 }
 const fmt = (r, id, risk, warnings) => ({
@@ -24,9 +24,12 @@ const fmt = (r, id, risk, warnings) => ({
   geometry: r.geometry.coordinates,
 });
 
-export async function buildMockTrip(origin, destination, locale, coords = {}) {
+export async function buildMockTrip(origin, destination, locale, coords = {}, mode = 'car') {
   if (!TOKEN) return { status: 503, body: { error: 'mapbox_token_missing' } };
   const th = locale === 'th';
+  // Demo only: different road settings per mode so Train / Bus / Car views show different maps
+  const extra = mode === 'bus' ? '&exclude=toll' : mode === 'train' ? '&exclude=motorway' : '';
+  const approx = mode === 'car' ? [] : [th ? '[จำลอง] เส้นทางโดยประมาณจากถนน' : '[MOCK] Geometry approximated from roads'];
   try {
     const ok = (p) => Number.isFinite(p?.lat) && Number.isFinite(p?.lng);
     const [o, d] = await Promise.all([
@@ -34,7 +37,7 @@ export async function buildMockTrip(origin, destination, locale, coords = {}) {
       ok(coords.destination) ? { lat: coords.destination.lat, lng: coords.destination.lng, label: destination } : geocode(destination),
     ]);
     if (!o || !d) return { status: 404, body: { error: 'location_not_found' } };
-    const base = await directions([[o.lng, o.lat], [d.lng, d.lat]], true);
+    const base = await directions([[o.lng, o.lat], [d.lng, d.lat]], true, extra);
     const normal = base[0];
     if (!normal) return { status: 502, body: { error: 'no_route' } };
     let safe = base[1];
@@ -42,7 +45,7 @@ export async function buildMockTrip(origin, destination, locale, coords = {}) {
       const line = normal.geometry.coordinates;
       const mid = line[Math.floor(line.length / 2)];
       const dx = d.lng - o.lng, dy = d.lat - o.lat, len = Math.hypot(dx, dy) || 1;
-      safe = (await directions([[o.lng, o.lat], [mid[0] - (dy / len) * 0.1, mid[1] + (dx / len) * 0.1], [d.lng, d.lat]], false))[0];
+      safe = (await directions([[o.lng, o.lat], [mid[0] - (dy / len) * 0.1, mid[1] + (dx / len) * 0.1], [d.lng, d.lat]], false, extra))[0];
     }
     const line = normal.geometry.coordinates;
     const mid = line[Math.floor(line.length / 2)];
@@ -53,8 +56,8 @@ export async function buildMockTrip(origin, destination, locale, coords = {}) {
         origin: o, destination: d,
         hazards: [{ lat: mid[1], lng: mid[0], label: th ? '[จำลอง] จุดเสี่ยงหิมะ/ถนนปิด' : '[MOCK] Snow / road-closure risk' }],
         routes: [
-          fmt(normal, 'normal', 'WARNING', [th ? '[จำลอง] ผ่านจุดเสี่ยงหิมะ' : '[MOCK] Passes a snow-risk point']),
-          fmt(safe || normal, 'safe', 'SAFE', []),
+          fmt(normal, 'normal', 'WARNING', [th ? '[จำลอง] ผ่านจุดเสี่ยงหิมะ' : '[MOCK] Passes a snow-risk point', ...approx]),
+          fmt(safe || normal, 'safe', 'SAFE', approx),
         ],
       },
     };
