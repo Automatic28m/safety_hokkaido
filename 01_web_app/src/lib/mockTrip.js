@@ -2,12 +2,28 @@
 // risk levels and warnings are placeholders. In production this data comes from the backend (02).
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+const KNOWN_PLACES = {
+  "chitose airport": { lng: 141.6750, lat: 42.7849, label: "New Chitose Airport" },
+  "new chitose airport": { lng: 141.6750, lat: 42.7849, label: "New Chitose Airport" },
+  "sapporo": { lng: 141.3544, lat: 43.0618, label: "Sapporo City" },
+  "otaru": { lng: 140.9934, lat: 43.1894, label: "Otaru City" },
+  "hakodate": { lng: 140.7367, lat: 41.7687, label: "Hakodate City" },
+  "niseko": { lng: 140.6875, lat: 42.8048, label: "Niseko" },
+  "asahikawa": { lng: 142.3649, lat: 43.7709, label: "Asahikawa City" },
+  "furano": { lng: 142.3832, lat: 43.3421, label: "Furano" }
+};
+
 async function mb(url) {
   const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`Mapbox HTTP ${res.status}`);
   return res.json();
 }
 async function geocode(q) {
+  const qLower = q.toLowerCase().trim();
+  for (const [key, val] of Object.entries(KNOWN_PLACES)) {
+    if (qLower.includes(key)) return val;
+  }
+  
   const d = await mb(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?country=jp&limit=1&proximity=141.35,43.06&access_token=${TOKEN}`);
   const f = d.features?.[0];
   return f ? { lng: f.center[0], lat: f.center[1], label: f.place_name } : null;
