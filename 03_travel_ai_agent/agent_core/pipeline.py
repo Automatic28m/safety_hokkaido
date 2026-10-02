@@ -1,4 +1,6 @@
 import requests
+from datetime import datetime
+from external_data.models import LiveDataSnapshot
 
 from data_integration.embedding_model import EmbeddingModel
 from risk_knowledge.hybrid_retriever import HybridRetriever
@@ -101,6 +103,19 @@ class RAGPipeline:
             live_data_list.append(get_disaster_warnings())
         if active_agents.get("train"):
             live_data_list.append(check_train_status("All"))
+
+        # ── SYSTEM UI NOTE: tell Node 07 if a map was opened ─────────────────
+        if route_intent:
+            ui_note = LiveDataSnapshot(
+                provider="SystemUI",
+                kind="ui_action",
+                scope={"region": "Local"},
+                status="ok",
+                fetched_at=datetime.utcnow().isoformat() + "Z",
+                expires_at=datetime.utcnow().isoformat() + "Z",
+                data={"summary": f"System has successfully opened an interactive map and Google Maps navigation button for the route from {route_intent.get('origin', 'A')} to {route_intent.get('destination', 'B')} by {route_intent.get('mode', 'vehicle')} on the right side of the screen. Acknowledge this to the user briefly."}
+            )
+            live_data_list.append(ui_note)
 
         # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
         messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
