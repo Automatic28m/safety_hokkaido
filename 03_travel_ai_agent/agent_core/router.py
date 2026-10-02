@@ -36,10 +36,13 @@ Format:
     "mode": "<train|bus|car>"
   } 
 }
-(Note: If the user is NOT asking for directions, "route_intent" MUST be null.)
+(Note: If the user is NOT asking for directions, "route_intent" MUST be null. But if they mention any travel from A to B, you MUST extract it even if route is "general" or "realtime".)
 
-Example:
+Example 1 (No directions):
 { "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps.", "route_intent": null }
+
+Example 2 (Asking for route/directions):
+{ "route": "general", "confidence": 0.99, "reasoning": "User asking how to travel between two cities.", "route_intent": { "origin": "Chitose Airport", "destination": "Sapporo", "mode": "train" } }
 """
 
 # ---------------------------------------------------------------------------
@@ -127,6 +130,7 @@ class Router:
                 raise ValueError(f"No JSON found in router response: {content}")
 
             result = json.loads(json_match.group())
+            print(f"[Router Debug] Raw LLM Output: {result}")
 
             if "route" not in result:
                 raise ValueError(f"Router response missing 'route': {result}")
