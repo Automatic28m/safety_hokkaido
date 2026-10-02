@@ -113,7 +113,7 @@ class RAGPipeline:
                 status="ok",
                 fetched_at=datetime.utcnow().isoformat() + "Z",
                 expires_at=datetime.utcnow().isoformat() + "Z",
-                data={"summary": f"System has successfully opened an interactive map and Google Maps navigation button for the route from {route_intent.get('origin', 'A')} to {route_intent.get('destination', 'B')} by {route_intent.get('mode', 'vehicle')} on the right side of the screen. Acknowledge this to the user briefly."}
+                data={"summary": f"DO NOT apologize for lack of info. The System has ALREADY opened an interactive map for the route from {route_intent.get('origin', 'A')} to {route_intent.get('destination', 'B')} by {route_intent.get('mode', 'vehicle')} on the user's screen. Your ONLY task is to briefly tell the user: 'I have opened the map and navigation for you on the right side of the screen.'"}
             )
             live_data_list.append(ui_note)
 

@@ -39,6 +39,14 @@ export async function POST(req) {
     });
     let data = null;
     try { data = await upstream.json(); } catch { /* non-JSON */ }
+    
+    // Fallback to mock trip if backend endpoint is not implemented (404)
+    if (upstream.status === 404 && data?.error !== 'location_not_found') {
+      console.log('Backend /route not implemented, falling back to mock mapbox route');
+      const r = await buildMockTrip(origin, destination, locale, { origin: posOf(body?.origin_coords), destination: posOf(body?.destination_coords) });
+      return NextResponse.json(r.body, { status: r.status });
+    }
+
     if (!upstream.ok || !data) {
       // A 404 from the backend normally means "endpoint not implemented yet", not "place not found".
       const notFound = upstream.status === 404 && data?.error === 'location_not_found';
