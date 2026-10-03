@@ -1,5 +1,5 @@
 import unittest
-from external_data.validation import validate_city, validate_region, validate_line_name
+from external_data.validation import validate_city, validate_region, validate_line_name, validate_airport_code
 
 
 class TestValidation(unittest.TestCase):
@@ -100,6 +100,36 @@ class TestValidation(unittest.TestCase):
             self.assertFalse(is_valid)
             self.assertIn("outside the known JR Hokkaido operational scope", err)
 
+    # ── Airport Code Validation ──────────────────────────────────
+    def test_15_airport_valid_hokkaido(self):
+        for code in ["CTS", "cts", "HKD", "AKJ", "OKD", "RJCC"]:
+            is_valid, cleaned, err = validate_airport_code(code)
+            self.assertTrue(is_valid, f"Expected airport {code} to be valid")
+            self.assertEqual(cleaned, code.strip().upper())
+            self.assertIsNone(err)
+
+    def test_16_airport_defaults_to_cts(self):
+        for empty_val in [None, "", "   "]:
+            is_valid, cleaned, err = validate_airport_code(empty_val)
+            self.assertTrue(is_valid)
+            self.assertEqual(cleaned, "CTS")
+
+    def test_17_airport_out_of_scope_fails(self):
+        for foreign in ["HND", "NRT", "KIX", "BKK", "LHR"]:
+            is_valid, _, err = validate_airport_code(foreign)
+            self.assertFalse(is_valid)
+            self.assertIn("outside the supported Hokkaido service scope", err)
+
+    def test_18_airport_injection_or_type_fails(self):
+        is_valid, _, err = validate_airport_code(123)
+        self.assertFalse(is_valid)
+        self.assertIn("must be a string", err)
+
+        is_valid, _, err = validate_airport_code("CTS; DROP")
+        self.assertFalse(is_valid)
+        self.assertIn("invalid or unsafe characters", err)
+
 
 if __name__ == "__main__":
     unittest.main()
+

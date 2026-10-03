@@ -84,3 +84,32 @@ def validate_line_name(line_name: object) -> Tuple[bool, str, Optional[str]]:
         return False, cleaned, f"Train line '{cleaned}' is outside the known JR Hokkaido operational scope."
 
     return True, cleaned, None
+
+
+HOKKAIDO_AIRPORTS = {
+    "cts", "okd", "hkd", "akj", "kuh", "mmb", "wkj", "oho", "shb", "ris", "rbj", "rjcc"
+}
+
+
+def validate_airport_code(airport_code: object) -> Tuple[bool, str, Optional[str]]:
+    if airport_code is None:
+        return True, "CTS", None
+
+    if not isinstance(airport_code, str):
+        return False, "", "Airport code must be a string."
+
+    cleaned = airport_code.strip().upper()
+    if not cleaned:
+        return True, "CTS", None
+
+    if len(cleaned) > 10:
+        return False, "", "Airport code exceeds maximum permitted length (10 characters)."
+
+    if INVALID_CHARS_PATTERN.search(cleaned):
+        return False, "", "Airport code contains invalid or unsafe characters."
+
+    if cleaned.lower() not in HOKKAIDO_AIRPORTS and cleaned not in ["CTS", "RJCC"]:
+        return False, cleaned, f"Airport '{cleaned}' is outside the supported Hokkaido service scope."
+
+    return True, cleaned, None
+
