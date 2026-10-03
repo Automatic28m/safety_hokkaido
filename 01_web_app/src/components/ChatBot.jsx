@@ -7,7 +7,6 @@ import ReactMarkdown from 'react-markdown';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTrip } from './TripContext';
-import MapUI from './MapUI';
 
 const LEVEL_STYLE = {
   SAFE: 'bg-green-700',
@@ -24,41 +23,11 @@ export default function ChatBot({ isOpen, onClose }) {
   const t = useTranslations('Chat');
   const locale = useLocale();
   const [input, setInput] = useState('');
-    const [currentRouteIntent, setCurrentRouteIntent] = useState(null);
-  const [mapData, setMapData] = useState(null);
-  const [isMapLoading, setIsMapLoading] = useState(false);
+  const [currentRouteIntent, setCurrentRouteIntent] = useState(null);
   const [messages, setMessages] = useState(() => [
     { role: 'ai', content: t('greeting'), timestamp: now() }
   ]);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!currentRouteIntent) return;
-    const fetchRoute = async () => {
-      setIsMapLoading(true);
-      try {
-        const res = await fetch('/api/trip/route', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            origin: currentRouteIntent.origin,
-            destination: currentRouteIntent.destination,
-            mode: currentRouteIntent.mode,
-            locale: locale
-          })
-        });
-        if (res.ok) {
-            const data = await res.json();
-            setMapData(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch map data", err);
-      } finally {
-        setIsMapLoading(false);
-      }
-    };
-    fetchRoute();
-  }, [currentRouteIntent, locale]);
   const [serviceStatus, setServiceStatus] = useState(null);
   const { conversationId, form, applyBackendTrip } = useTrip();
   const pathname = usePathname();
@@ -377,7 +346,7 @@ export default function ChatBot({ isOpen, onClose }) {
                     rel="noopener noreferrer"
                     className="bg-blue-600 text-white px-4 py-2 w-fit rounded-full shadow hover:bg-blue-700 text-sm font-semibold flex items-center gap-2 transition-colors"
                   >
-                    🗺️ Navigate in Google Maps
+                    🗺️ Open App
                   </a>
                 </div>
                 <button 
@@ -389,29 +358,14 @@ export default function ChatBot({ isOpen, onClose }) {
                 </button>
               </div>
               <div className="flex-1 w-full relative">
-                {isMapLoading ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
-                    <div className="w-8 h-8 border-4 border-[#0c4ca3] border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-gray-500 font-medium">Loading Map...</p>
-                  </div>
-                ) : mapData && mapData.routes ? (
-                  <MapUI 
-                      routes={mapData.routes} 
-                      hazards={mapData.hazards || []} 
-                      pins={{ 
-                          origin: mapData.origin, 
-                          destination: mapData.destination 
-                      }} 
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-blue-50/50">
-                    <div className="text-4xl mb-4">🗺️</div>
-                    <h4 className="text-lg font-bold text-gray-800 mb-2">Ready to Navigate</h4>
-                    <p className="text-gray-600 max-w-sm mb-6">
-                      We have identified your travel route. Click the button above to open real-time navigation in Google Maps.
-                    </p>
-                  </div>
-                )}
+                <iframe
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    allowFullScreen
+                    src={`https://maps.google.com/maps?saddr=${encodeURIComponent(currentRouteIntent.origin)}&daddr=${encodeURIComponent(currentRouteIntent.destination)}&output=embed`}
+                ></iframe>
               </div>
             </div>
           )}
