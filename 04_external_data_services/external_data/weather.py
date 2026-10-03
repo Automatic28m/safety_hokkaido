@@ -1,6 +1,13 @@
+import os
 import requests
 from typing import Optional
-from config import config
+try:
+    from config import config
+except ImportError:
+    class _FallbackConfig:
+        METEOSOURCE_API_KEY = os.getenv("METEOSOURCE_API_KEY", "")
+    config = _FallbackConfig()
+
 from external_data.models import LiveDataSnapshot
 from external_data.cache import global_cache, utc_now_iso
 from external_data.validation import validate_city

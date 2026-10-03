@@ -15,6 +15,11 @@ class LiveDataSnapshot:
     source_url: Optional[str] = None
     error_code: Optional[str] = None
     notice: Optional[str] = None
+    degraded: Optional[bool] = None
+
+    def __post_init__(self):
+        if self.degraded is None:
+            self.degraded = (self.status != "ok")
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

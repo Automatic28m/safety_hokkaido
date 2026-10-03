@@ -2,7 +2,13 @@ import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone, timedelta
 import requests
-from config import config
+try:
+    from config import config
+except ImportError:
+    import os
+    class _FallbackConfig:
+        METEOSOURCE_API_KEY = os.getenv("METEOSOURCE_API_KEY", "")
+    config = _FallbackConfig()
 from external_data.models import LiveDataSnapshot
 from external_data.cache import global_cache, utc_now_iso
 from external_data.tools import (
