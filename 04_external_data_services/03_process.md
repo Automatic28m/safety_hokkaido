@@ -3,7 +3,7 @@
 1. **Source Policy:**
    - Weather: Meteosource API (`weather.py`)
    - Disaster: Japan Meteorological Agency (JMA Bosai) official feeds (`disaster.py`)
-   - Transit: Yahoo Transit live service information (`trains.py`) and JR Hokkaido simulation (`train.py`)
+   - Transit: Yahoo Transit live service information and ODPT API (`trains.py`, `train.py`)
    - Flights: AviationStack flight tracking for Hokkaido airports (`flights.py`)
    - Roads: Hokkaido Road Information system (`roads.py`)
 
