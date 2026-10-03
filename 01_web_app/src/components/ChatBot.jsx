@@ -391,7 +391,7 @@ export default function ChatBot({ isOpen, onClose }) {
                           loading="lazy"
                           allowFullScreen
                           onLoad={() => setMapIframeLoading(false)}
-                          src={`https://maps.google.com/maps?saddr=${encodeURIComponent(currentRouteIntent.origin)}&daddr=${encodeURIComponent(currentRouteIntent.destination)}&output=embed`}
+                          src={`https://maps.google.com/maps?saddr=${encodeURIComponent(currentRouteIntent.origin)}&daddr=${encodeURIComponent(currentRouteIntent.destination)}&dirflg=${currentRouteIntent.mode === 'train' || currentRouteIntent.mode === 'bus' ? 'r' : currentRouteIntent.mode === 'walk' ? 'w' : 'd'}&output=embed`}
                       ></iframe>
                     </div>
                   </>
