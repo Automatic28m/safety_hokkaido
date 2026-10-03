@@ -110,40 +110,10 @@ class RAGPipeline:
             dest_en = route_intent.get('destination', 'B')
             mode_en = route_intent.get('mode', 'vehicle')
             
-            # Simple mock distance/duration calculation
-            KNOWN_COORDS = {
-                "chitose airport": (42.7849, 141.6750),
-                "new chitose airport": (42.7849, 141.6750),
-                "sapporo": (43.0618, 141.3544),
-                "otaru": (43.1894, 140.9934),
-                "hakodate": (41.7687, 140.7367),
-                "niseko": (42.8048, 140.6875),
-                "asahikawa": (43.7709, 142.3649),
-                "furano": (43.3421, 142.3832)
-            }
-            
-            import math
-            duration_msg = ""
-            orig_c = KNOWN_COORDS.get(origin_en.lower())
-            dest_c = KNOWN_COORDS.get(dest_en.lower())
-            if orig_c and dest_c:
-                # Haversine distance
-                lat1, lon1 = orig_c
-                lat2, lon2 = dest_c
-                R = 6371 # km
-                dlat = math.radians(lat2 - lat1)
-                dlon = math.radians(lon2 - lon1)
-                a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-                dist = 2 * R * math.asin(math.sqrt(a))
-                # Add 20% for road routing overhead
-                dist = dist * 1.2
-                
-                speed = 60 # km/h for car/bus
-                if mode_en == 'train': speed = 80
-                elif mode_en == 'walk': speed = 5
-                
-                duration_mins = int((dist / speed) * 60)
-                duration_msg = f" The estimated distance is {dist:.1f} km, which takes about {duration_mins} minutes by {mode_en}. Tell this to the user."
+            # Fetch estimation from Module 04 (OSRM)
+            from external_data.tools import get_route_estimate
+            route_info = get_route_estimate(origin_en, dest_en, mode_en)
+            duration_msg = route_info.data.get("summary", "") if hasattr(route_info, "data") else ""
 
             ui_note = LiveDataSnapshot(
                 provider="SystemUI",

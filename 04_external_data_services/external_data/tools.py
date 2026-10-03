@@ -2,6 +2,7 @@ from external_data.models import LiveDataSnapshot
 from external_data.weather import fetch_real_time_weather
 from external_data.disaster import fetch_disaster_warnings
 from external_data.train import fetch_train_status
+from external_data.routing import fetch_osrm_route_estimate
 
 # Tool schemas for LLM tool-calling interfaces
 WEATHER_TOOL_SCHEMA = {
@@ -70,3 +71,7 @@ def get_disaster_warnings(region: str = "Hokkaido") -> LiveDataSnapshot:
 def check_train_status(line_name: str = "All") -> LiveDataSnapshot:
     """Checks JR Hokkaido status simulation returning a LiveDataSnapshot marked with status 'mocked'."""
     return fetch_train_status(line_name)
+
+def get_route_estimate(origin: str, destination: str, mode: str = "vehicle") -> LiveDataSnapshot:
+    """Fetches estimated route distance and duration using OSRM API."""
+    return fetch_osrm_route_estimate(origin, destination, mode)
