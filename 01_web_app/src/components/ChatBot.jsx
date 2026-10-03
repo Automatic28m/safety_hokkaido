@@ -241,7 +241,7 @@ export default function ChatBot({ isOpen, onClose }) {
                       )}
                       <div className={`px-6 py-4 rounded-3xl w-full shadow-sm ${msg.isError || msg.safetyLevel === 'urgent' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-gray-100 text-gray-800'}`}>
                         <div className="prose prose-sm prose-slate max-w-none prose-p:leading-relaxed prose-li:my-0.5">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          <ReactMarkdown>{typeof msg.content === 'string' ? msg.content.replace(/\\n/g, '\n') : msg.content}</ReactMarkdown>
                         </div>
                         {msg.degraded && (
                           <p className="mt-3 text-xs font-semibold text-amber-700">⚠️ {t('degraded')}</p>
