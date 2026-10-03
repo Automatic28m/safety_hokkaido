@@ -46,7 +46,7 @@ TRAIN_TOOL_SCHEMA = {
     "type": "function",
     "function": {
         "name": "check_train_status",
-        "description": "Check simulated operational status and delays for JR Hokkaido train lines.",
+        "description": "Check real-time operational status, delays, and disruptions for JR Hokkaido train lines.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -122,13 +122,13 @@ def get_disaster_warnings(region: str = "Hokkaido") -> LiveDataSnapshot:
 
 
 def check_train_status(line_name: str = "All") -> LiveDataSnapshot:
-    """Checks JR Hokkaido status simulation returning a LiveDataSnapshot marked with status 'mocked'."""
+    """Checks live real-time operational status for JR Hokkaido train lines."""
     return fetch_train_status(line_name)
 
 
 def check_live_train_status(line_name: str = "All") -> LiveDataSnapshot:
-    """Fetches live JR Hokkaido operational transit status from Yahoo Transit."""
-    return fetch_yahoo_transit_status(line_name)
+    """Fetches live JR Hokkaido operational transit status from Yahoo Transit or ODPT."""
+    return fetch_live_train_status(line_name)
 
 
 def check_flight_status(airport_code: str = "CTS") -> LiveDataSnapshot:

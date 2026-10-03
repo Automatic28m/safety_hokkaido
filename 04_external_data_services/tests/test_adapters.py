@@ -19,35 +19,57 @@ class TestAdapters(unittest.TestCase):
     def setUp(self):
         global_cache.clear()
 
-    # ── Train Adapter Tests ──────────────────────────────────────
-    def test_01_train_status_always_mocked(self):
+    # ── Train Adapter Tests (Live Transit) ──────────────────────
+    @patch("external_data.trains.requests.get")
+    def test_01_train_status_live_success_normal(self, mock_get):
+        mock_resp = MagicMock(status_code=200, text="""
+        <table>
+        <tr><td><a href="...">千歳線</a></td><td>平常運転</td><td>平常運転です</td></tr>
+        </table>
+        """)
+        mock_get.return_value = mock_resp
         snapshot = fetch_train_status("Rapid Airport")
         self.assertIsInstance(snapshot, LiveDataSnapshot)
-        self.assertEqual(snapshot.provider, "jr_hokkaido_simulator")
+        self.assertEqual(snapshot.status, "ok")
         self.assertEqual(snapshot.kind, "train")
-        self.assertEqual(snapshot.status, "mocked")
-        self.assertIn("Simulated", snapshot.notice)
-        self.assertEqual(snapshot.source_url, "https://www.jrhokkaido.co.jp/")
-        self.assertTrue(snapshot.data["is_simulated"])
-        self.assertEqual(snapshot.data["verification_status"], "unverified_mock")
+        self.assertFalse(snapshot.data["is_delayed"])
+        self.assertEqual(snapshot.data["status"], "normal")
 
-    def test_02_train_airport_delays_simulated(self):
+    @patch("external_data.trains.requests.get")
+    def test_02_train_live_disruption_detected(self, mock_get):
+        mock_resp = MagicMock(status_code=200, text="""
+        <table>
+        <tr><td><a href="...">千歳線</a></td><td>遅延</td><td>大雪の影響で遅れが出ています</td></tr>
+        </table>
+        """)
+        mock_get.return_value = mock_resp
         snap = fetch_train_status("Rapid Airport")
-        self.assertEqual(snap.data["simulation_details"]["operational_state"], "delayed")
-        self.assertEqual(snap.data["simulation_details"]["estimated_delay_minutes"], 20)
-        self.assertEqual(snap.data["simulation_details"]["cause"], "track_snow_accumulation")
+        self.assertEqual(snap.status, "ok")
+        self.assertTrue(snap.data["is_delayed"])
+        self.assertEqual(snap.data["status"], "disrupted")
+        self.assertIn("千歳線", snap.data["disrupted_lines"][0]["line_name"])
 
-    def test_03_train_standard_line_normal(self):
+    @patch("external_data.trains.requests.get")
+    def test_03_train_timeout_returns_unavailable(self, mock_get):
+        mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")
         snap = fetch_train_status("Hakodate Line")
-        self.assertEqual(snap.data["simulation_details"]["operational_state"], "normal")
-        self.assertEqual(snap.data["simulation_details"]["estimated_delay_minutes"], 0)
+        self.assertEqual(snap.status, "unavailable")
+        self.assertEqual(snap.error_code, "TIMEOUT")
+        self.assertTrue(snap.degraded)
 
     def test_04_train_invalid_input_returns_unavailable(self):
         snapshot = fetch_train_status("InvalidLine!@#$")
         self.assertEqual(snapshot.status, "unavailable")
         self.assertEqual(snapshot.error_code, "INVALID_INPUT")
 
-    def test_05_train_zero_safety_judgment(self):
+    @patch("external_data.trains.requests.get")
+    def test_05_train_zero_safety_judgment(self, mock_get):
+        mock_resp = MagicMock(status_code=200, text="""
+        <table>
+        <tr><td><a href="...">千歳線</a></td><td>平常運転</td><td>平常運転です</td></tr>
+        </table>
+        """)
+        mock_get.return_value = mock_resp
         snapshot = fetch_train_status("Rapid Airport")
         self.assertNotIn("safety_level", snapshot.data)
         self.assertNotIn("recommendation", snapshot.data)
@@ -334,6 +356,46 @@ class TestAdapters(unittest.TestCase):
         self.assertTrue(callable(check_live_train_status))
         self.assertTrue(callable(check_flight_status))
         self.assertTrue(callable(check_road_status))
+
+    # ── ODPT & Live Train Flag Tests ────────────────────────────
+    @patch("external_data.trains.requests.get")
+    def test_28_odpt_train_success(self, mock_get):
+        from external_data.trains import fetch_live_train_status
+        original_key = os.getenv("ODPT_API_KEY")
+        os.environ["ODPT_API_KEY"] = "mock_odpt_key"
+        try:
+            mock_resp = MagicMock(status_code=200)
+            mock_resp.json.return_value = [
+                {
+                    "odpt:railway": "odpt.Railway:JR-Hokkaido.Chitose",
+                    "odpt:trainInformationText": "平常運転"
+                }
+            ]
+            mock_get.return_value = mock_resp
+            snapshot = fetch_live_train_status("Chitose Line")
+            self.assertEqual(snapshot.status, "ok")
+            self.assertEqual(snapshot.provider, "odpt_public_transport")
+            self.assertFalse(snapshot.data["is_delayed"])
+        finally:
+            if original_key is not None:
+                os.environ["ODPT_API_KEY"] = original_key
+            else:
+                os.environ.pop("ODPT_API_KEY", None)
+
+    def test_29_use_live_train_disabled(self):
+        from external_data.trains import fetch_live_train_status
+        original_flag = os.getenv("USE_LIVE_TRAIN")
+        os.environ["USE_LIVE_TRAIN"] = "false"
+        try:
+            snapshot = fetch_live_train_status("Rapid Airport")
+            self.assertEqual(snapshot.status, "unavailable")
+            self.assertEqual(snapshot.error_code, "LIVE_TRAIN_DISABLED")
+            self.assertTrue(snapshot.degraded)
+        finally:
+            if original_flag is not None:
+                os.environ["USE_LIVE_TRAIN"] = original_flag
+            else:
+                os.environ.pop("USE_LIVE_TRAIN", None)
 
 
 if __name__ == "__main__":

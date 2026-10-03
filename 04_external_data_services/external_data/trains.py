@@ -1,15 +1,23 @@
+import logging
+import os
 import re
-import requests
 from typing import Dict, Any, List, Optional
+
+import requests
+
 from external_data.models import LiveDataSnapshot
 from external_data.cache import global_cache, utc_now_iso
 from external_data.validation import validate_line_name
 
+logger = logging.getLogger(__name__)
+
 YAHOO_TRAIN_PROVIDER = "yahoo_transit"
+ODPT_TRAIN_PROVIDER = "odpt_public_transport"
 TRAIN_KIND = "train"
 DEFAULT_TRAIN_TTL = 300
 REQUEST_TIMEOUT_SECONDS = 3.0
 YAHOO_DIAINFO_HOKKAIDO_URL = "https://transit.yahoo.co.jp/diainfo/area/2"
+ODPT_TRAIN_API_URL = "https://api.odpt.org/api/v4/odpt:TrainInformation"
 
 # Map common English queries to Japanese line keywords
 LINE_SEARCH_MAP = {
@@ -215,3 +223,118 @@ def fetch_yahoo_transit_status(line_name: str = "All") -> LiveDataSnapshot:
             notice=f"Failed to fetch Yahoo Transit live data: {str(e)}",
             source_url=YAHOO_DIAINFO_HOKKAIDO_URL
         )
+
+
+def _normalize_odpt_response(items: List[Dict[str, Any]], valid_line: str) -> Dict[str, Any]:
+    """Parses and normalizes raw ODPT train information items into standardized dictionary."""
+    lower_line = valid_line.lower()
+    if lower_line == "all":
+        matched_items = items
+    else:
+        search_keywords = LINE_SEARCH_MAP.get(lower_line, [valid_line])
+        matched_items = [
+            it for it in items
+            if any(kw.lower() in str(it.get("odpt:railway", "")).lower() or
+                   kw in str(it.get("odpt:trainInformationText", ""))
+                   for kw in search_keywords)
+        ]
+        if not matched_items:
+            matched_items = items
+
+    disrupted_lines = []
+    for it in matched_items:
+        raw_text = str(it.get("odpt:trainInformationText", ""))
+        if "平常" not in raw_text and "normal" not in raw_text.lower():
+            disrupted_lines.append({
+                "line_name": it.get("odpt:railway", "Unknown"),
+                "status_ja": raw_text,
+                "status_en": "delayed_or_suspended",
+                "details": raw_text
+            })
+
+    has_disruptions = len(disrupted_lines) > 0
+    return {
+        "line_name": valid_line,
+        "status": "disrupted" if has_disruptions else "normal",
+        "is_delayed": has_disruptions,
+        "queried_scope": valid_line,
+        "total_lines_monitored": len(matched_items),
+        "disruptions_count": len(disrupted_lines),
+        "has_disruptions": has_disruptions,
+        "disrupted_lines": disrupted_lines,
+    }
+
+
+def _fetch_odpt_train_status(valid_line: str, api_key: str) -> Optional[LiveDataSnapshot]:
+    """Attempts to query the Open Data for Public Transportation (ODPT) API using ODPT_API_KEY."""
+    if not api_key:
+        return None
+    try:
+        cached = global_cache.get(ODPT_TRAIN_PROVIDER, TRAIN_KIND, valid_line)
+        if cached:
+            return cached
+
+        url = f"{ODPT_TRAIN_API_URL}?acl:consumerKey={api_key}"
+        resp = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
+        if resp.status_code == 200:
+            items = resp.json()
+            if isinstance(items, list) and len(items) > 0:
+                normalized_data = _normalize_odpt_response(items, valid_line)
+                snap = LiveDataSnapshot(
+                    provider=ODPT_TRAIN_PROVIDER,
+                    kind=TRAIN_KIND,
+                    scope=valid_line,
+                    status="ok",
+                    fetched_at=utc_now_iso(),
+                    data=normalized_data,
+                    source_url="https://developer.odpt.org/",
+                    notice="Live operational status from ODPT Public Transportation Open Data API."
+                )
+                return global_cache.set(snap, ttl_seconds=DEFAULT_TRAIN_TTL)
+    except Exception as e:
+        logger.debug("Failed to fetch ODPT train status: %s", e)
+        return None
+    return None
+
+
+def fetch_live_train_status(line_name: str = "All") -> LiveDataSnapshot:
+    """Unified entry point for live train status.
+    
+    1. Checks USE_LIVE_TRAIN flag (returns unavailable if explicitly disabled).
+    2. Validates input line name.
+    3. If ODPT_API_KEY is configured, checks the ODPT Open Data API.
+    4. Otherwise (or on ODPT miss/error), checks Yahoo Transit Hokkaido live feed.
+    """
+    use_live = os.getenv("USE_LIVE_TRAIN", "true").strip().lower()
+    if use_live in ("false", "0", "no"):
+        return LiveDataSnapshot(
+            provider="train_adapter",
+            kind=TRAIN_KIND,
+            scope=str(line_name),
+            status="unavailable",
+            fetched_at=utc_now_iso(),
+            error_code="LIVE_TRAIN_DISABLED",
+            notice="Live train status checking is disabled via USE_LIVE_TRAIN environment variable.",
+            source_url=YAHOO_DIAINFO_HOKKAIDO_URL
+        )
+
+    is_valid, valid_line, err_msg = validate_line_name(line_name)
+    if not is_valid:
+        return LiveDataSnapshot(
+            provider="train_adapter",
+            kind=TRAIN_KIND,
+            scope=str(line_name),
+            status="unavailable",
+            fetched_at=utc_now_iso(),
+            error_code="INVALID_INPUT",
+            notice=err_msg,
+            source_url=YAHOO_DIAINFO_HOKKAIDO_URL
+        )
+
+    odpt_key = os.getenv("ODPT_API_KEY", "").strip()
+    if odpt_key:
+        odpt_snap = _fetch_odpt_train_status(valid_line, odpt_key)
+        if odpt_snap and odpt_snap.status == "ok":
+            return odpt_snap
+
+    return fetch_yahoo_transit_status(valid_line)

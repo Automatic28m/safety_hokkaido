@@ -54,10 +54,8 @@ class TestIntegrationScenarios(unittest.TestCase):
             self.assertIsNotNone(weather_res.fetched_at)
 
             train_res = check_train_status("Hakodate Line")
-            self.assertEqual(train_res.status, "mocked")
-            self.assertIn("Simulated", train_res.notice)
-            self.assertEqual(train_res.data["line_name"], "Hakodate Line")
-            self.assertEqual(train_res.data["simulation_details"]["operational_state"], "normal")
+            self.assertIn(train_res.status, ["ok", "unavailable", "stale"])
+            self.assertEqual(train_res.kind, "train")
         finally:
             config.METEOSOURCE_API_KEY = original_key
 
@@ -126,15 +124,21 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.assertEqual(warning_info["active_headline"], "Blizzard and tsunami advisory in effect.")
 
     # ─────────────────────────────────────────────────────────────
-    # Scenario 4: Airport Route Transit Delays Simulation
+    # Scenario 4: Airport Route Transit Delays (Live Provider Parsing)
     # ─────────────────────────────────────────────────────────────
-    def test_scenario_04_airport_transit_delay(self):
+    @patch("external_data.trains.requests.get")
+    def test_scenario_04_airport_transit_delay(self, mock_train_get):
+        mock_resp = MagicMock(status_code=200, text="""
+        <table>
+        <tr><td><a href="...">千歳線</a></td><td>遅延</td><td>大雪の影響で遅れが出ています</td></tr>
+        </table>
+        """)
+        mock_train_get.return_value = mock_resp
         train_res = check_train_status("Rapid Airport")
-        self.assertEqual(train_res.status, "mocked")
-        self.assertEqual(train_res.data["simulation_details"]["operational_state"], "delayed")
-        self.assertEqual(train_res.data["simulation_details"]["estimated_delay_minutes"], 20)
-        self.assertEqual(train_res.data["simulation_details"]["cause"], "track_snow_accumulation")
-        self.assertIn("Sapporo - New Chitose Airport", train_res.data["simulation_details"]["affected_section"])
+        self.assertEqual(train_res.status, "ok")
+        self.assertTrue(train_res.data["is_delayed"])
+        self.assertEqual(train_res.data["status"], "disrupted")
+        self.assertIn("千歳線", train_res.data["disrupted_lines"][0]["line_name"])
 
     # ─────────────────────────────────────────────────────────────
     # Scenario 5: Stale Fallback during Provider Outage

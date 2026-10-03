@@ -30,15 +30,12 @@ class TestIntegration(unittest.TestCase):
         self.assertEqual(func["name"], "check_train_status")
         self.assertIn("line_name", func["parameters"]["properties"])
 
-    def test_04_train_status_mocked_contract(self):
+    def test_04_train_status_contract(self):
         res = check_train_status("Rapid Airport")
         self.assertIsInstance(res, LiveDataSnapshot)
-        self.assertEqual(res.status, "mocked")
-        self.assertEqual(res.provider, "jr_hokkaido_simulator")
+        self.assertIn(res.status, ["ok", "unavailable", "stale"])
         self.assertEqual(res.kind, "train")
         self.assertIsNotNone(res.fetched_at)
-        self.assertIsNotNone(res.expires_at)
-        self.assertIn("Simulated status", res.notice)
 
     def test_05_disaster_warnings_live_fetch(self):
         res = get_disaster_warnings("Hokkaido")
