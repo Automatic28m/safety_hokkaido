@@ -216,7 +216,7 @@ export default function ChatBot({ isOpen, onClose }) {
         </div>
 
         <div className={`flex flex-1 overflow-hidden ${currentRouteIntent ? 'flex-row' : 'flex-col'}`}>
-          <div className={`flex flex-col ${currentRouteIntent ? 'w-1/2 border-r border-gray-200' : 'w-full'} h-full`}>
+          <div className={`flex flex-col transition-all duration-300 ease-in-out ${currentRouteIntent ? (isMapCollapsed ? 'flex-1 border-r border-gray-200' : 'w-1/2 border-r border-gray-200') : 'w-full'} h-full`}>
             <div className="flex-1 p-4 overflow-y-auto overscroll-none bg-gray-50 flex flex-col gap-6">
               {messages.map((msg, index) => (
                 <div key={index} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
