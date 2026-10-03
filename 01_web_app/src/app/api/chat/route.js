@@ -75,6 +75,8 @@ export async function POST(req) {
       return NextResponse.json({ error: 'backend_error' }, { status: upstream.ok ? 502 : upstream.status });
     }
     if (data.answer === undefined && data.reply !== undefined) data.answer = data.reply;
+    if (data.request_id && !data.message_id) data.message_id = data.request_id;
+    
     return NextResponse.json(data);
   } catch (err) {
     console.error('Chat proxy error:', err);
