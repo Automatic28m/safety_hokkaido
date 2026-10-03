@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 import logging
+import os
+import requests
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from .errors import PipelineUnavailableError
-from .schemas import AskResponse, ChatRequest, ErrorResponse, NormalizedAskRequest, RouteIntent
+from .schemas import AskResponse, ChatRequest, ErrorResponse, NormalizedAskRequest, RouteIntent, FeedbackRequest
 
 logger = logging.getLogger("api_backend")
 
@@ -23,6 +25,18 @@ SAFE_ERROR_REPLY = (
     "Sorry, something went wrong on our side. Please try again later."
 )
 
+def _send_audit_background(payload: dict) -> None:
+    audit_url = os.environ.get("NODE08_AUDIT_URL", "http://127.0.0.1:8008/audit")
+    audit_token = os.environ.get("NODE08_AUDIT_TOKEN", "")
+    try:
+        requests.post(
+            audit_url,
+            json=payload,
+            headers={"X-Node08-Token": audit_token},
+            timeout=2.0
+        )
+    except Exception as e:
+        logger.warning("Failed to send audit log to module 08: %s", str(e))
 
 def _request_id(request: Request) -> str:
     return getattr(request.state, "request_id", None) or "unknown"
@@ -73,7 +87,7 @@ def create_router(
         return {"status": "ok"}
 
     @router.post("/ask")
-    def ask(payload: ChatRequest, request: Request):
+    def ask(payload: ChatRequest, request: Request, background_tasks: BackgroundTasks):
         request_id = _request_id(request)
         pipeline = get_pipeline()
 
@@ -174,6 +188,18 @@ def create_router(
             evidence=evidence,
             live_sources=live_sources,
         )
+
+        audit_payload = {
+            "request_id": request_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "route": "rag",
+            "degraded": degraded,
+            "evidence_ids": [e.get("chunk_id", str(e)) for e in evidence] if evidence else [],
+            "source_versions": ["corpus-2026-09-24"],
+            "evaluation_schema_version": "1"
+        }
+        background_tasks.add_task(_send_audit_background, audit_payload)
+
         return response_body.model_dump()
 
     @router.post("/reset_memory")
@@ -182,5 +208,20 @@ def create_router(
             raise HTTPException(status_code=404)
         reset_memory()
         return {"status": "Memory wiped."}
+
+    @router.post("/feedback")
+    def feedback_endpoint(payload: FeedbackRequest):
+        feedback_url = os.environ.get("NODE08_FEEDBACK_URL", "http://127.0.0.1:8008/feedback")
+        target_payload = {
+            "request_id": payload.message_id,  # map frontend message_id to backend request_id
+            "rating": payload.rating
+        }
+        try:
+            res = requests.post(feedback_url, json=target_payload, timeout=2.0)
+            res.raise_for_status()
+            return {"status": "ok"}
+        except requests.RequestException as e:
+            logger.warning("Failed to send feedback to module 08: %s", str(e))
+            raise HTTPException(status_code=503, detail="feedback_unavailable")
 
     return router
