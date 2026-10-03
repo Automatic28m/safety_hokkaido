@@ -25,10 +25,24 @@ Available routes:
                    (e.g. "Is it safe to drive to Otaru right now?", "Should I take the train given the earthquake warning?")
 
 You MUST reply with ONLY valid JSON and nothing else. No markdown, no explanation.
-Format: { "route": "<route>", "confidence": <0.0-1.0>, "reasoning": "<brief reason>" }
+Format: 
+{ 
+  "route": "<route>", 
+  "confidence": <0.0-1.0>, 
+  "reasoning": "<brief reason>",
+  "route_intent": {
+    "origin": "<start in English>",
+    "destination": "<end in English>",
+    "mode": "<train|bus|car>"
+  } 
+}
+(Note: If the user mentions travel from A to B, you MUST extract it and translate origin/destination to ENGLISH to ensure maps work correctly. Example: "โอตารุ" -> "Otaru". If no travel is mentioned, route_intent MUST be null.)
 
-Example:
-{ "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps." }
+Example 1 (No directions):
+{ "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps.", "route_intent": null }
+
+Example 2 (Asking for route/directions):
+{ "route": "general", "confidence": 0.99, "reasoning": "User asking how to travel between two cities.", "route_intent": { "origin": "Chitose Airport", "destination": "Sapporo", "mode": "train" } }
 """
 
 # ---------------------------------------------------------------------------
@@ -110,12 +124,21 @@ class Router:
 
             content = raw["choices"][0]["message"]["content"]
 
-            # Robustly extract JSON even if model wraps it in markdown code fences
-            json_match = re.search(r'\{.*?\}', content, re.DOTALL)
-            if not json_match:
+            start_idx = content.find('{')
+            end_idx = content.rfind('}')
+            if start_idx == -1 or end_idx == -1:
                 raise ValueError(f"No JSON found in router response: {content}")
 
-            result = json.loads(json_match.group())
+            json_str = content[start_idx:end_idx+1]
+            
+            try:
+                result = json.loads(json_str)
+            except Exception as e:
+                print(f"[Router Error] Failed to parse JSON: {e}")
+                print(f"[Router Error] Raw string was: {json_str}")
+                raise
+
+            print(f"[Router Debug] Raw LLM Output: {result}")
 
             if "route" not in result:
                 raise ValueError(f"Router response missing 'route': {result}")
@@ -128,6 +151,9 @@ class Router:
                     print(f"[Router] Low confidence ({confidence:.2f}). Keyword fallback → '{fallback_route}'")
                     result["route"] = fallback_route
                     result["reasoning"] = "[Keyword fallback] Overrode low-confidence LLM route."
+
+            # Ensure route_intent is explicitly in the result
+            result["route_intent"] = result.get("route_intent", None)
 
             print(
                 f"[Router] Route='{result['route']}' | "
@@ -144,14 +170,16 @@ class Router:
                 return {
                     "route": fallback_route,
                     "confidence": 0.5,
-                    "reasoning": "Router error — rescued by keyword fallback."
+                    "reasoning": "Router error — rescued by keyword fallback.",
+                    "route_intent": None
                 }
             
             print("[Router] Defaulting to 'rag'.")
             return {
                 "route": "rag",
                 "confidence": 0.5,
-                "reasoning": "Router error — safe default to RAG."
+                "reasoning": "Router error — safe default to RAG.",
+                "route_intent": None
             }
 
     def _keyword_fallback(self, query: str) -> Optional[str]:

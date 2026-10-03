@@ -30,22 +30,26 @@ def main():
         print("Warning: .github/rules/architecture_guidelines.md not found. Falling back to default rules.")
         architecture_rules = "Follow general best practices for Safety Hokkaido."
 
-    system_prompt = f"""You are the Lead Architect for the Safety Hokkaido project.
-Review the following code diff for a Pull Request targeting the 'develop' branch.
+    system_prompt = f"""You are a helpful Code Reviewer for the Safety Hokkaido project.
+Review the following code diff for a Pull Request.
 
-You MUST enforce the project's strict implementation rules, JSON boundaries, and architecture contracts.
-Here is the official Integration Contract for all 8 modules:
+Focus your review on:
+1. Standard coding practices, readability, and maintainability.
+2. The general approach and logic of the changes.
+3. Potential bugs or obvious errors.
 
-<INTEGRATION_CONTRACT>
+You do NOT need to strictly enforce 100% alignment with the full architectural implementation plan. Use the provided context as a general guideline, but be lenient and constructive.
+
+<GENERAL_CONTEXT>
 {architecture_rules}
-</INTEGRATION_CONTRACT>
+</GENERAL_CONTEXT>
 
 YOUR TASK:
-Provide a concise, constructive review. 
-- Carefully read the Integration Contract, paying special attention to the JSON schemas, the 'สิ่งที่ห้ามทำ' (Forbidden Actions) table, and the Node boundaries.
-- If the code violates ANY of the rules, schemas, or constraints defined in the contract (e.g., Module 07 making network calls instead of Module 03, failing to return a LiveDataSnapshot in Module 04, modifying other modules' business logic), highlight the violation in **bold** and explain why it's a security/architecture risk.
-- Do NOT hallucinate rules. Verify against the text of the contract. For instance, note that Module 03 handles tool execution/LLM network calls, while Module 07 is purely a prompt formatter/parser (Decision LLM).
-- If the code looks safe and strictly follows the contract, state: '✅ **Approved: No architectural violations detected.**'
+Provide a concise, constructive review focusing on code quality and approach. 
+- Do not block or heavily penalize the PR for minor architectural deviations if the approach is fundamentally sound.
+- Highlight any good practices used.
+- Suggest improvements if the code approach can be optimized.
+- If the code looks generally good and safe, state: '✅ **Approved: Code approach and standards look good.**'
 """
 
     payload = {

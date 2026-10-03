@@ -1,4 +1,6 @@
 import requests
+from datetime import datetime
+from external_data.models import LiveDataSnapshot
 
 from data_integration.embedding_model import EmbeddingModel
 from risk_knowledge.hybrid_retriever import HybridRetriever
@@ -54,6 +56,7 @@ class RAGPipeline:
         # ── DL06 ROUTER: classify intent before doing any heavy work ────────
         route_result = self.router.classify(query, chat_history)
         route = route_result["route"]   # "general" | "rag" | "realtime" | "rag+realtime"
+        route_intent = route_result.get("route_intent")
 
         # ── DL05 QUERY REFORMULATION: make standalone if needed ─────────────
         if config.USE_MEMORY and chat_history:
@@ -101,6 +104,28 @@ class RAGPipeline:
         if active_agents.get("train"):
             live_data_list.append(check_train_status("All"))
 
+        # ── SYSTEM UI NOTE: tell Node 07 if a map was opened ─────────────────
+        if route_intent:
+            origin_en = route_intent.get('origin', 'A')
+            dest_en = route_intent.get('destination', 'B')
+            mode_en = route_intent.get('mode', 'vehicle')
+            
+            # Fetch estimation from Module 04 (OSRM)
+            from external_data.tools import get_route_estimate
+            route_info = get_route_estimate(origin_en, dest_en, mode_en)
+            duration_msg = route_info.data.get("summary", "") if hasattr(route_info, "data") else ""
+
+            ui_note = LiveDataSnapshot(
+                provider="SystemUI",
+                kind="ui_action",
+                scope={"region": "Local"},
+                status="ok",
+                fetched_at=datetime.utcnow().isoformat() + "Z",
+                expires_at=datetime.utcnow().isoformat() + "Z",
+                data={"summary": f"DO NOT apologize for lack of info. The System has ALREADY opened an interactive map for the route from {origin_en} to {dest_en} by {mode_en} on the user's screen.{duration_msg} Your ONLY task is to briefly tell the user: 'I have opened the map and navigation for you on the right side of the screen, the estimated travel time is ...'"}
+            )
+            live_data_list.append(ui_note)
+
         # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
         messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
         json_string_from_groq = self._call_groq(messages)
@@ -114,6 +139,7 @@ class RAGPipeline:
             "live_sources": [snapshot.to_dict() for snapshot in live_data_list],
             "degraded": decision_dict["degraded"],
             "notices": decision_dict["notices"],
+            "route_intent": route_intent,
         }
 
     def ask(self, query: str, chat_history=None, enabled_agents=None):

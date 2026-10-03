@@ -1,7 +1,13 @@
+import os
 import unittest
 from unittest.mock import patch, MagicMock
 import requests
-from config import config
+try:
+    from config import config
+except ImportError:
+    class _FallbackConfig:
+        METEOSOURCE_API_KEY = os.getenv("METEOSOURCE_API_KEY", "")
+    config = _FallbackConfig()
 from external_data.models import LiveDataSnapshot
 from external_data.cache import global_cache
 from external_data.train import fetch_train_status
@@ -191,6 +197,145 @@ class TestAdapters(unittest.TestCase):
         finally:
             config.METEOSOURCE_API_KEY = original_key
 
+    # ── Yahoo Transit Live Adapter Tests ─────────────────────────
+    @patch("external_data.trains.requests.get")
+    def test_17_yahoo_transit_success(self, mock_get):
+        from external_data.trains import fetch_yahoo_transit_status
+        sample_html = (
+            "<table>"
+            "<tr><td><a href='/1'>函館本線[小樽～札幌]</a></td><td>平常運転</td><td>事故・遅延情報はありません</td></tr>"
+            "<tr><td><a href='/2'>千歳線</a></td><td>遅延</td><td>大雪の影響で一部遅延</td></tr>"
+            "</table>"
+        )
+        mock_resp = MagicMock(status_code=200, text=sample_html)
+        mock_get.return_value = mock_resp
+
+        snapshot = fetch_yahoo_transit_status("All")
+        self.assertIsInstance(snapshot, LiveDataSnapshot)
+        self.assertEqual(snapshot.status, "ok")
+        self.assertEqual(snapshot.provider, "yahoo_transit")
+        self.assertEqual(snapshot.kind, "train")
+        self.assertEqual(snapshot.data["total_lines_monitored"], 2)
+        self.assertEqual(snapshot.data["disruptions_count"], 1)
+        self.assertTrue(snapshot.data["has_disruptions"])
+
+    @patch("external_data.trains.requests.get")
+    def test_18_yahoo_transit_timeout(self, mock_get):
+        from external_data.trains import fetch_yahoo_transit_status
+        mock_get.side_effect = requests.exceptions.Timeout("Yahoo timed out")
+        snapshot = fetch_yahoo_transit_status("Rapid Airport")
+        self.assertEqual(snapshot.status, "unavailable")
+        self.assertEqual(snapshot.error_code, "TIMEOUT")
+
+    def test_19_yahoo_transit_invalid_line(self):
+        from external_data.trains import fetch_yahoo_transit_status
+        snapshot = fetch_yahoo_transit_status("InvalidLine!@#$")
+        self.assertEqual(snapshot.status, "unavailable")
+        self.assertEqual(snapshot.error_code, "INVALID_INPUT")
+
+    # ── Flight Adapter Tests ─────────────────────────────────────
+    @patch("external_data.flights._get_api_key")
+    def test_20_flight_missing_api_key(self, mock_key):
+        from external_data.flights import fetch_flight_status
+        mock_key.return_value = ""
+        snapshot = fetch_flight_status("CTS")
+        self.assertEqual(snapshot.status, "unavailable")
+        self.assertEqual(snapshot.error_code, "CONFIG_MISSING")
+
+    @patch("external_data.flights._get_api_key")
+    @patch("external_data.flights.requests.get")
+    def test_21_flight_success(self, mock_get, mock_key):
+        from external_data.flights import fetch_flight_status
+        mock_key.return_value = "fake_key"
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {
+            "data": [
+                {
+                    "flight_status": "scheduled",
+                    "flight": {"iata": "NH123"},
+                    "airline": {"name": "All Nippon Airways"},
+                    "departure": {"airport": "Tokyo Haneda", "iata": "HND"},
+                    "arrival": {"airport": "New Chitose", "iata": "CTS", "scheduled": "2026-10-03T10:00:00", "delay": 0}
+                }
+            ]
+        }
+        mock_get.return_value = mock_resp
+
+        snapshot = fetch_flight_status("CTS")
+        self.assertEqual(snapshot.status, "ok")
+        self.assertEqual(snapshot.provider, "aviationstack")
+        self.assertEqual(snapshot.kind, "flight")
+        self.assertEqual(snapshot.data["total_flights"], 1)
+
+    @patch("external_data.flights._get_api_key")
+    @patch("external_data.flights.requests.get")
+    def test_22_flight_quota_or_api_error(self, mock_get, mock_key):
+        from external_data.flights import fetch_flight_status
+        mock_key.return_value = "fake_key"
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {
+            "error": {
+                "code": "usage_limit_reached",
+                "info": "Your monthly usage limit has been reached."
+            }
+        }
+        mock_get.return_value = mock_resp
+
+        snapshot = fetch_flight_status("CTS")
+        self.assertEqual(snapshot.status, "unavailable")
+        self.assertEqual(snapshot.error_code, "USAGE_LIMIT_REACHED")
+
+    def test_23_flight_invalid_airport_code(self):
+        from external_data.flights import fetch_flight_status
+        snapshot = fetch_flight_status("INVALID_LONG_CODE!@#")
+        self.assertEqual(snapshot.status, "unavailable")
+        self.assertEqual(snapshot.error_code, "INVALID_INPUT")
+
+    # ── Road Adapter Tests ───────────────────────────────────────
+    @patch("external_data.roads.requests.get")
+    def test_24_road_success(self, mock_get):
+        from external_data.roads import fetch_road_status
+        mock_resp = MagicMock(status_code=200, text="<html><body>道路情報 通行規制情報</body></html>")
+        mock_get.return_value = mock_resp
+
+        snapshot = fetch_road_status("Hokkaido")
+        self.assertEqual(snapshot.status, "ok")
+        self.assertEqual(snapshot.provider, "hokkaido_road_info")
+        self.assertEqual(snapshot.kind, "road")
+        self.assertTrue(snapshot.data["portal_accessible"])
+
+    @patch("external_data.roads.requests.get")
+    def test_25_road_timeout(self, mock_get):
+        from external_data.roads import fetch_road_status
+        mock_get.side_effect = requests.exceptions.Timeout("Road portal timeout")
+        snapshot = fetch_road_status("Hokkaido")
+        self.assertEqual(snapshot.status, "unavailable")
+        self.assertEqual(snapshot.error_code, "TIMEOUT")
+
+    def test_26_road_invalid_region(self):
+        from external_data.roads import fetch_road_status
+        snapshot = fetch_road_status("TokyoRegion123")
+        self.assertEqual(snapshot.status, "unavailable")
+        self.assertEqual(snapshot.error_code, "INVALID_INPUT")
+
+    # ── Tools Wrapper Tests ──────────────────────────────────────
+    def test_27_tools_schemas_registered(self):
+        from external_data.tools import (
+            LIVE_TRAIN_TOOL_SCHEMA,
+            FLIGHT_TOOL_SCHEMA,
+            ROAD_TOOL_SCHEMA,
+            check_live_train_status,
+            check_flight_status,
+            check_road_status
+        )
+        self.assertEqual(LIVE_TRAIN_TOOL_SCHEMA["function"]["name"], "check_live_train_status")
+        self.assertEqual(FLIGHT_TOOL_SCHEMA["function"]["name"], "check_flight_status")
+        self.assertEqual(ROAD_TOOL_SCHEMA["function"]["name"], "check_road_status")
+        self.assertTrue(callable(check_live_train_status))
+        self.assertTrue(callable(check_flight_status))
+        self.assertTrue(callable(check_road_status))
+
 
 if __name__ == "__main__":
     unittest.main()
+

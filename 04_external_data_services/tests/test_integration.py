@@ -69,20 +69,21 @@ class TestIntegration(unittest.TestCase):
             self.assertEqual(warn["office_code"], "017000")
 
     def test_08_reexport_via_backend_src_tools(self):
-        from src.tools import (
-            get_real_time_weather as be_weather,
-            get_disaster_warnings as be_disaster,
-            check_train_status as be_train,
-            WEATHER_TOOL_SCHEMA as be_ws,
-            DISASTER_TOOL_SCHEMA as be_ds,
-            TRAIN_TOOL_SCHEMA as be_ts
+        # Verify external_data package cleanly exports all tools & schemas
+        from external_data import (
+            get_real_time_weather as ed_weather,
+            get_disaster_warnings as ed_disaster,
+            check_train_status as ed_train,
+            WEATHER_TOOL_SCHEMA as ed_ws,
+            DISASTER_TOOL_SCHEMA as ed_ds,
+            TRAIN_TOOL_SCHEMA as ed_ts
         )
-        self.assertIs(be_weather, get_real_time_weather)
-        self.assertIs(be_disaster, get_disaster_warnings)
-        self.assertIs(be_train, check_train_status)
-        self.assertEqual(be_ws, WEATHER_TOOL_SCHEMA)
-        self.assertEqual(be_ds, DISASTER_TOOL_SCHEMA)
-        self.assertEqual(be_ts, TRAIN_TOOL_SCHEMA)
+        self.assertIs(ed_weather, get_real_time_weather)
+        self.assertIs(ed_disaster, get_disaster_warnings)
+        self.assertIs(ed_train, check_train_status)
+        self.assertEqual(ed_ws, WEATHER_TOOL_SCHEMA)
+        self.assertEqual(ed_ds, DISASTER_TOOL_SCHEMA)
+        self.assertEqual(ed_ts, TRAIN_TOOL_SCHEMA)
 
 
 if __name__ == "__main__":
