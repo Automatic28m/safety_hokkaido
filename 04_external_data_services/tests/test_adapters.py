@@ -357,6 +357,46 @@ class TestAdapters(unittest.TestCase):
         self.assertTrue(callable(check_flight_status))
         self.assertTrue(callable(check_road_status))
 
+    # ── ODPT & Live Train Flag Tests ────────────────────────────
+    @patch("external_data.trains.requests.get")
+    def test_28_odpt_train_success(self, mock_get):
+        from external_data.trains import fetch_live_train_status
+        original_key = os.getenv("ODPT_API_KEY")
+        os.environ["ODPT_API_KEY"] = "mock_odpt_key"
+        try:
+            mock_resp = MagicMock(status_code=200)
+            mock_resp.json.return_value = [
+                {
+                    "odpt:railway": "odpt.Railway:JR-Hokkaido.Chitose",
+                    "odpt:trainInformationText": "平常運転"
+                }
+            ]
+            mock_get.return_value = mock_resp
+            snapshot = fetch_live_train_status("Chitose Line")
+            self.assertEqual(snapshot.status, "ok")
+            self.assertEqual(snapshot.provider, "odpt_public_transport")
+            self.assertFalse(snapshot.data["is_delayed"])
+        finally:
+            if original_key is not None:
+                os.environ["ODPT_API_KEY"] = original_key
+            else:
+                os.environ.pop("ODPT_API_KEY", None)
+
+    def test_29_use_live_train_disabled(self):
+        from external_data.trains import fetch_live_train_status
+        original_flag = os.getenv("USE_LIVE_TRAIN")
+        os.environ["USE_LIVE_TRAIN"] = "false"
+        try:
+            snapshot = fetch_live_train_status("Rapid Airport")
+            self.assertEqual(snapshot.status, "unavailable")
+            self.assertEqual(snapshot.error_code, "LIVE_TRAIN_DISABLED")
+            self.assertTrue(snapshot.degraded)
+        finally:
+            if original_flag is not None:
+                os.environ["USE_LIVE_TRAIN"] = original_flag
+            else:
+                os.environ.pop("USE_LIVE_TRAIN", None)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,7 +9,7 @@ from external_data.models import LiveDataSnapshot
 from external_data.trains import fetch_live_train_status
 
 
-def fetch_train_status(line_name: str = "All", prefer_live: bool = True) -> LiveDataSnapshot:
+def fetch_train_status(line_name: str = "All") -> LiveDataSnapshot:
     """Fetches real-time JR Hokkaido train operational status.
     
     Connects to live transit providers. If unavailable, returns status='unavailable'
