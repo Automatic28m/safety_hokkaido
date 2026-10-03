@@ -105,3 +105,8 @@ class ErrorResponse(AskResponse):
     detail: Any = None
     status: str = "error"
     degraded: bool = True
+
+class FeedbackRequest(BaseModel):
+    conversation_id: str
+    message_id: str
+    rating: str
