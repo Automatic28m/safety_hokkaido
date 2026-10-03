@@ -24,6 +24,8 @@ export default function ChatBot({ isOpen, onClose }) {
   const locale = useLocale();
   const [input, setInput] = useState('');
   const [currentRouteIntent, setCurrentRouteIntent] = useState(null);
+  const [isMapCollapsed, setIsMapCollapsed] = useState(false);
+  const [mapIframeLoading, setMapIframeLoading] = useState(true);
   const [messages, setMessages] = useState(() => [
     { role: 'ai', content: t('greeting'), timestamp: now() }
   ]);
@@ -106,7 +108,11 @@ export default function ChatBot({ isOpen, onClose }) {
       
       // Handle Route Intent Split View
       if (data.route_intent) {
+          if (!currentRouteIntent || currentRouteIntent.origin !== data.route_intent.origin || currentRouteIntent.destination !== data.route_intent.destination) {
+              setMapIframeLoading(true);
+          }
           setCurrentRouteIntent(data.route_intent);
+          setIsMapCollapsed(false);
       }
       
       const msgId = data.message_id || crypto.randomUUID();
@@ -334,39 +340,62 @@ export default function ChatBot({ isOpen, onClose }) {
           </div>
 
           {currentRouteIntent && (
-            <div className="w-1/2 flex flex-col bg-white overflow-hidden relative">
-              <div className="p-4 flex justify-between items-center bg-gray-50 border-b border-gray-200 shrink-0">
-                <div className="flex flex-col gap-2">
-                  <h3 className="font-bold text-[#0c4ca3] text-lg">
-                    📍 {currentRouteIntent.origin} ➔ {currentRouteIntent.destination}
-                  </h3>
-                  <a 
-                    href={getGoogleMapsUrl(currentRouteIntent.origin, currentRouteIntent.destination, currentRouteIntent.mode)}
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="bg-blue-600 text-white px-4 py-2 w-fit rounded-full shadow hover:bg-blue-700 text-sm font-semibold flex items-center gap-2 transition-colors"
-                  >
-                    🗺️ Open App
-                  </a>
-                </div>
-                <button 
-                    onClick={() => setCurrentRouteIntent(null)}
-                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 hover:text-red-500 transition-colors"
-                    aria-label="Close Map"
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                </button>
-              </div>
-              <div className="flex-1 w-full relative">
-                <iframe
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    allowFullScreen
-                    src={`https://maps.google.com/maps?saddr=${encodeURIComponent(currentRouteIntent.origin)}&daddr=${encodeURIComponent(currentRouteIntent.destination)}&output=embed`}
-                ></iframe>
-              </div>
+            <div 
+                className={`transition-all duration-300 ease-in-out flex flex-col bg-white overflow-hidden relative border-l border-gray-200 ${isMapCollapsed ? 'w-12 cursor-pointer hover:bg-gray-50' : 'w-1/2'}`}
+                onClick={isMapCollapsed ? () => setIsMapCollapsed(false) : undefined}
+            >
+              {isMapCollapsed ? (
+                  <div className="h-full w-full flex items-center justify-center relative">
+                    <div className="-rotate-90 whitespace-nowrap text-blue-600 font-bold flex items-center gap-2 tracking-wide">
+                        🗺️ Open Map
+                    </div>
+                  </div>
+              ) : (
+                  <>
+                    <div className="p-4 flex justify-between items-center bg-gray-50 border-b border-gray-200 shrink-0">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="font-bold text-[#0c4ca3] text-lg flex items-center gap-2">
+                          📍 {currentRouteIntent.origin} ➔ {currentRouteIntent.destination}
+                          <span className="text-gray-500 text-sm ml-2 bg-gray-200 px-2 py-1 rounded-full flex items-center gap-1">
+                            {currentRouteIntent.mode === 'train' ? '🚆' : currentRouteIntent.mode === 'bus' ? '🚌' : currentRouteIntent.mode === 'walk' ? '🚶' : '🚗'} {currentRouteIntent.mode}
+                          </span>
+                        </h3>
+                        <a 
+                          href={getGoogleMapsUrl(currentRouteIntent.origin, currentRouteIntent.destination, currentRouteIntent.mode)}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="bg-blue-600 text-white px-4 py-2 w-fit rounded-full shadow hover:bg-blue-700 text-sm font-semibold flex items-center gap-2 transition-colors"
+                        >
+                          🗺️ Open App
+                        </a>
+                      </div>
+                      <button 
+                          onClick={() => setIsMapCollapsed(true)}
+                          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition-colors"
+                          aria-label="Collapse Map"
+                      >
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6" /></svg>
+                      </button>
+                    </div>
+                    <div className="flex-1 w-full relative bg-gray-50">
+                      {mapIframeLoading && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-50/50 z-10 transition-opacity duration-300">
+                            <div className="w-10 h-10 border-4 border-[#0c4ca3] border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <p className="text-[#0c4ca3] font-bold animate-pulse">Loading Google Maps...</p>
+                          </div>
+                      )}
+                      <iframe
+                          width="100%"
+                          height="100%"
+                          style={{ border: 0 }}
+                          loading="lazy"
+                          allowFullScreen
+                          onLoad={() => setMapIframeLoading(false)}
+                          src={`https://maps.google.com/maps?saddr=${encodeURIComponent(currentRouteIntent.origin)}&daddr=${encodeURIComponent(currentRouteIntent.destination)}&output=embed`}
+                      ></iframe>
+                    </div>
+                  </>
+              )}
             </div>
           )}
         </div>
