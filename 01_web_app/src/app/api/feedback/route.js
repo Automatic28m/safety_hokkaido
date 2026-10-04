@@ -14,7 +14,7 @@ export async function POST(request) {
   // Dev-only: same switch as the chat route
   if (process.env.MOCK_BACKEND === 'true') return Response.json({ ok: true });
   try {
-    const upstream = await fetch(`${BACKEND_URL}/api/feedback`, {
+    const upstream = await fetch(`${BACKEND_URL}/feedback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversation_id, message_id, rating }),
