@@ -2,7 +2,7 @@ from external_data.models import LiveDataSnapshot
 from external_data.weather import fetch_real_time_weather
 from external_data.disaster import fetch_disaster_warnings
 from external_data.train import fetch_train_status
-from external_data.trains import fetch_yahoo_transit_status
+from external_data.trains import fetch_live_train_status
 from external_data.flights import fetch_flight_status
 from external_data.roads import fetch_road_status
 
@@ -80,13 +80,18 @@ FLIGHT_TOOL_SCHEMA = {
     "type": "function",
     "function": {
         "name": "check_flight_status",
-        "description": "Check flight arrival/departure operational status, cancellations, and blizzard delays for Hokkaido airports (default: CTS New Chitose).",
+        "description": "Check flight operational status, cancellations, and delays for Hokkaido airports (default: CTS).",
         "parameters": {
             "type": "object",
             "properties": {
                 "airport_code": {
                     "type": "string",
                     "description": "The 3-letter IATA airport code, default is 'CTS' (New Chitose Airport)."
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": ["arrival", "departure", "both"],
+                    "description": "Specify 'arrival' for incoming flights, 'departure' for outgoing flights, or 'both'. Default is 'arrival'. Use 'both' ONLY if absolutely necessary to save API quota."
                 }
             }
         }
@@ -131,11 +136,44 @@ def check_live_train_status(line_name: str = "All") -> LiveDataSnapshot:
     return fetch_live_train_status(line_name)
 
 
-def check_flight_status(airport_code: str = "CTS") -> LiveDataSnapshot:
+def check_flight_status(airport_code: str = "CTS", direction: str = "arrival") -> LiveDataSnapshot:
     """Fetches real-time flight status and delays from AviationStack."""
-    return fetch_flight_status(airport_code)
+    return fetch_flight_status(airport_code, direction)
 
 
 def check_road_status(region: str = "Hokkaido") -> LiveDataSnapshot:
     """Fetches real-time road conditions and closures from Hokkaido Road Information portal."""
     return fetch_road_status(region)
+
+
+ROUTE_TOOL_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "get_route_estimate",
+        "description": "Calculate estimated driving or travel time between two cities or landmarks using OSRM.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "origin": {
+                    "type": "string",
+                    "description": "Starting location, e.g., 'New Chitose Airport', 'Sapporo'"
+                },
+                "destination": {
+                    "type": "string",
+                    "description": "Destination, e.g., 'Otaru', 'Niseko'"
+                },
+                "mode": {
+                    "type": "string",
+                    "description": "Travel mode (vehicle, train, walk). Default is vehicle."
+                }
+            },
+            "required": ["origin", "destination"]
+        }
+    }
+}
+
+
+def get_route_estimate(origin: str, destination: str, mode: str = "vehicle") -> LiveDataSnapshot:
+    """Fetches estimated route distance and duration using OSRM API."""
+    from external_data.routing import fetch_osrm_route_estimate
+    return fetch_osrm_route_estimate(origin, destination, mode)

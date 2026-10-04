@@ -6,7 +6,14 @@ from data_integration.embedding_model import EmbeddingModel
 from risk_knowledge.hybrid_retriever import HybridRetriever
 from risk_knowledge.rerankers import Reranker
 from decision_engine.generator import Generator
-from external_data.tools import get_real_time_weather, get_disaster_warnings, check_train_status
+from external_data.tools import (
+    get_real_time_weather, 
+    get_disaster_warnings, 
+    check_train_status,
+    check_live_train_status,
+    check_flight_status,
+    check_road_status
+)
 from agent_core.query_transform import QueryTransformer
 from agent_core.memory import ConversationMemory
 from agent_core.router import Router
@@ -84,10 +91,21 @@ class RAGPipeline:
         # ── TOOLS: only activate real-time tools if the router says so ──────
         if route in ("realtime", "rag+realtime"):
             print(f"[Pipeline] Route='{route}' → Activating real-time tools.")
-            active_agents = {"weather": True, "disaster": True, "train": True}
+            q_lower = english_query.lower()
+            # Smart Tool Activation to save API quotas (especially AviationStack 100/mo)
+            active_agents = {
+                "weather": "weather" in q_lower or "snow" in q_lower or "rain" in q_lower or "temp" in q_lower,
+                "disaster": True, # Always check disaster for safety
+                "train": "train" in q_lower or "jr" in q_lower or "station" in q_lower,
+                "flight": "flight" in q_lower or "airport" in q_lower or "cts" in q_lower or "plane" in q_lower,
+                "road": "road" in q_lower or "drive" in q_lower or "car" in q_lower or "bus" in q_lower or "pass" in q_lower
+            }
+            # Fallback if none matched but route is realtime
+            if not any([active_agents["weather"], active_agents["train"], active_agents["flight"], active_agents["road"]]):
+                active_agents = {"weather": True, "disaster": True, "train": True, "flight": True, "road": True}
         else:
             print(f"[Pipeline] Route='{route}' → Skipping real-time tools.")
-            active_agents = {"weather": False, "disaster": False, "train": False}
+            active_agents = {"weather": False, "disaster": False, "train": False, "flight": False, "road": False}
 
         # Allow the API caller to still override tools (e.g. frontend toggles)
         if enabled_agents is not None:
@@ -102,7 +120,21 @@ class RAGPipeline:
         if active_agents.get("disaster"):
             live_data_list.append(get_disaster_warnings())
         if active_agents.get("train"):
-            live_data_list.append(check_train_status("All"))
+            # Use the new live train adapter instead of the mocked one
+            live_data_list.append(check_live_train_status("All"))
+        if active_agents.get("flight"):
+            # Smart Direction to save AviationStack quota
+            q_lower = english_query.lower()
+            flight_dir = "both"
+            if "depart" in q_lower or "leav" in q_lower or "out" in q_lower:
+                flight_dir = "departure"
+            elif "arriv" in q_lower or "land" in q_lower or "inbound" in q_lower:
+                flight_dir = "arrival"
+                
+            # Defaulting to CTS (New Chitose Airport)
+            live_data_list.append(check_flight_status("CTS", direction=flight_dir))
+        if active_agents.get("road"):
+            live_data_list.append(check_road_status("Hokkaido"))
 
         # ── SYSTEM UI NOTE: tell Node 07 if a map was opened ─────────────────
         if route_intent:
