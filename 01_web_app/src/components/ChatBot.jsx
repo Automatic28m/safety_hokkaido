@@ -4,6 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTrip } from './TripContext';
@@ -241,7 +243,7 @@ export default function ChatBot({ isOpen, onClose }) {
                       )}
                       <div className={`px-6 py-4 rounded-3xl w-full shadow-sm ${msg.isError || msg.safetyLevel === 'urgent' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-gray-100 text-gray-800'}`}>
                         <div className="prose prose-sm prose-slate max-w-none prose-p:leading-relaxed prose-li:my-0.5">
-                          <ReactMarkdown>{typeof msg.content === 'string' ? msg.content.replace(/\\n/g, '\n') : msg.content}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{typeof msg.content === 'string' ? msg.content.replace(/\\n/g, '\n') : msg.content}</ReactMarkdown>
                         </div>
                         {msg.degraded && (
                           <p className="mt-3 text-xs font-semibold text-amber-700">⚠️ {t('degraded')}</p>

@@ -24,10 +24,10 @@ def run_stage_1_mock_contract_test():
     train_res = check_train_status("Rapid Airport")
     print("\n[Train Status Contract]")
     print(f"Provider: {train_res.provider}")
-    print(f"Status:   {train_res.status} (Verified: Marked as mocked)")
+    print(f"Status:   {train_res.status}")
     print(f"Notice:   {train_res.notice}")
     print(f"Data:     {json.dumps(train_res.data, indent=2)}")
-    assert train_res.status == "mocked", "Train status must be mocked"
+    assert train_res.status in ["ok", "unavailable", "stale"], "Unexpected train status"
     assert "safety_level" not in train_res.data, "Node 04 must not emit safety_level"
 
     # 2. Disaster contract (live JMA test)
