@@ -191,6 +191,18 @@ class RAGPipeline:
             json={
                 "model": config.LLM_MODEL,
                 "messages": messages,
+                "max_tokens": 800,
             },
         )
-        return response.json()["choices"][0]["message"]["content"]
+        if response.status_code != 200:
+            error_msg = f"LLM API Error {response.status_code}: {response.text}"
+            print(f"[ERROR] {error_msg}")
+            # If the context is too large, Groq often returns 400 or 413
+            if "context" in response.text.lower() or "limit" in response.text.lower() or response.status_code in [400, 413, 429]:
+                return "ขออภัยค่ะ ข้อมูลที่ดึงมามีขนาดใหญ่เกินกว่าที่ระบบจะประมวลผลได้ (Context Window Exceeded) กรุณาจำกัดคำถามให้เจาะจงขึ้น"
+            return f"ขออภัยค่ะ เกิดข้อผิดพลาดจาก LLM API: {response.text}"
+            
+        try:
+            return response.json()["choices"][0]["message"]["content"]
+        except KeyError:
+            return f"ขออภัยค่ะ รูปแบบข้อมูลที่ตอบกลับจาก LLM ไม่ถูกต้อง: {response.text}"

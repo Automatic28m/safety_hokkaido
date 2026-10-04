@@ -100,7 +100,7 @@ def fetch_flight_status(airport_code: str = "CTS", direction: str = "arrival") -
     try:
         params = {
             "access_key": api_key,
-            "limit": 50
+            "limit": 15
         }
         if direction == "departure":
             params["dep_iata"] = valid_airport

@@ -1,0 +1,25 @@
+FROM python:3.10-slim
+
+# Install system dependencies (build-essential for some pip packages if needed)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy python dependencies first for caching
+COPY 02_api_backend/requirements.txt ./02_api_backend/
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r 02_api_backend/requirements.txt
+
+# Copy all project files (ignoring .dockerignore items)
+COPY . /app/
+
+# Setup environment
+ENV PYTHONPATH=/app
+ENV HOST=0.0.0.0
+
+WORKDIR /app/02_api_backend
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
