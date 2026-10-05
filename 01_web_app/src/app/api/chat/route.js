@@ -20,34 +20,6 @@ export async function POST(req) {
     return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
   }
 
-  // Dev-only: set MOCK_BACKEND=true in .env.local to test the UI without module 02. Off by default.
-  if (process.env.MOCK_BACKEND === 'true') {
-    const th = locale === 'th';
-    const q = message.toLowerCase();
-    const level = /earthquake|แผ่นดินไหว|ฮาโกดาเตะ|hakodate/.test(q) ? 'AVOID_TRAVEL' : /train|delay|รถไฟ|ล่าช้า/.test(q) ? 'WARNING' : 'SAFE';
-    const text = {
-      SAFE: th ? '[ข้อมูลจำลอง] สภาพอากาศปกติ เดินทางได้ตามปกติ' : '[MOCK] Conditions look normal. Travel as planned.',
-      WARNING: th ? '[ข้อมูลจำลอง] ดึงสถานะรถไฟสดไม่ได้ ควรตรวจสอบก่อนเดินทาง' : '[MOCK] Live train status is unavailable. Please check before travelling.',
-      AVOID_TRAVEL: th ? '[ข้อมูลจำลอง] ตรวจพบแผ่นดินไหวรุนแรง หลีกเลี่ยงการเดินทางและไปศูนย์อพยพ' : '[MOCK] Strong earthquake detected. Avoid travel and go to a shelter.',
-    }[level];
-    await new Promise((r) => setTimeout(r, 800));
-    const base = {
-      message_id: `mock-${Date.now()}`,
-      answer: text,
-      safety_level: level,
-      status: level === 'WARNING' ? 'degraded' : 'ok',
-      sources_used: ['Mock data'],
-      service_status: { weather: 'ok', train: level === 'WARNING' ? 'down' : 'ok', flight: 'ok', traffic: 'ok' },
-    };
-    // Demo: a route-related question with a filled trip form returns new routes, like the real backend should
-    let tripPart = {};
-    const tc = trip_context;
-    if (tc?.origin && tc?.destination && /route|เส้นทาง|avoid|เลี่ยง|snow|หิมะ|detour/i.test(message)) {
-      if (r.status === 200) tripPart = { ...r.body, trip: { origin: tc.origin, destination: tc.destination, datetime: tc.datetime, preferences: { ...(tc.preferences || {}), avoid_mountain: true } } };
-    }
-    return NextResponse.json({ ...base, ...tripPart });
-  }
-
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 55000);
   try {
