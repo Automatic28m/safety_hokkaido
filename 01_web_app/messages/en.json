@@ -34,7 +34,18 @@
     "infoTitle": "HOKKAIDO<br/>INFORMATION",
     "infoText": "<strong class=\"text-black font-bold\">Hokkaido</strong> is the northernmost island of Japan. It is famous for beautiful nature and cold, snowy winters. The largest city is Sapporo, known for its snow festival. Hokkaido also has delicious food, such as fresh seafood and dairy products.",
     "recentEarthquakeTitle": "Recent Earthquake",
-    "noEarthquakeData": "No recent earthquake data available."
+    "noEarthquakeData": "No recent earthquake data available.",
+    "aiTitle": "Tamago AI",
+    "aiSubtitle": "SMART CAPABILITIES",
+    "aiFeature1Title": "Route Intent & Guidance",
+    "aiFeature1Desc": "Suggests safe routes and generates real-time trip schedules based on weather.",
+    "aiFeature2Title": "Live Flight & Transit",
+    "aiFeature2Desc": "Monitors live flight status, JR operations, and highway closures.",
+    "aiFeature3Title": "Temporal Hazard Forecasting",
+    "aiFeature3Desc": "Analyzes Hokkaido blizzards up to 24 hours ahead to predict danger zones.",
+    "aiFeature4Title": "Emergency Override",
+    "aiFeature4Desc": "Forces 119/110 contact prompts automatically during Shindo 5+ quakes."
+
   },
   "Transportation": {
     "title": "TRANS<br/>PORTATION",
