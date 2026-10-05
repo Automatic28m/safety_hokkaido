@@ -91,33 +91,68 @@ def validate_feedback(signal: dict[str, Any]) -> dict[str, str]:
     return {"request_id": _uuid(signal["request_id"]), "rating": signal["rating"]}
 
 
+import os
+
+# Detect if we should use Postgres or SQLite
+DATABASE_URL = os.environ.get("DATABASE_URL")
+USE_POSTGRES = DATABASE_URL and DATABASE_URL.startswith("postgres")
+
+if USE_POSTGRES:
+    import psycopg2
+    from psycopg2.extras import DictCursor
+
 class AuditStore:
     def __init__(self, path: str | Path):
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        if not USE_POSTGRES:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            
         with self._connect() as db:
-            db.executescript("""
-                CREATE TABLE IF NOT EXISTS audit (
-                    request_id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    route TEXT NOT NULL,
-                    degraded INTEGER NOT NULL,
-                    evidence_ids TEXT NOT NULL,
-                    source_versions TEXT NOT NULL,
-                    evaluation_schema_version TEXT NOT NULL,
-                    index_version TEXT
-                );
-                CREATE TABLE IF NOT EXISTS feedback (
-                    request_id TEXT PRIMARY KEY REFERENCES audit(request_id) ON DELETE CASCADE,
-                    rating TEXT NOT NULL CHECK (rating IN ('up', 'down')),
-                    created_at TEXT NOT NULL
-                );
-            """)
+            cursor = db.cursor()
+            if USE_POSTGRES:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS audit (
+                        request_id TEXT PRIMARY KEY,
+                        timestamp TEXT NOT NULL,
+                        route TEXT NOT NULL,
+                        degraded INTEGER NOT NULL,
+                        evidence_ids TEXT NOT NULL,
+                        source_versions TEXT NOT NULL,
+                        evaluation_schema_version TEXT NOT NULL,
+                        index_version TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS feedback (
+                        request_id TEXT PRIMARY KEY REFERENCES audit(request_id) ON DELETE CASCADE,
+                        rating TEXT NOT NULL CHECK (rating IN ('up', 'down')),
+                        created_at TEXT NOT NULL
+                    );
+                """)
+            else:
+                db.executescript("""
+                    CREATE TABLE IF NOT EXISTS audit (
+                        request_id TEXT PRIMARY KEY,
+                        timestamp TEXT NOT NULL,
+                        route TEXT NOT NULL,
+                        degraded INTEGER NOT NULL,
+                        evidence_ids TEXT NOT NULL,
+                        source_versions TEXT NOT NULL,
+                        evaluation_schema_version TEXT NOT NULL,
+                        index_version TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS feedback (
+                        request_id TEXT PRIMARY KEY REFERENCES audit(request_id) ON DELETE CASCADE,
+                        rating TEXT NOT NULL CHECK (rating IN ('up', 'down')),
+                        created_at TEXT NOT NULL
+                    );
+                """)
 
     @contextmanager
     def _connect(self):
-        db = sqlite3.connect(self.path)
-        db.execute("PRAGMA foreign_keys = ON")
+        if USE_POSTGRES:
+            db = psycopg2.connect(DATABASE_URL)
+        else:
+            db = sqlite3.connect(self.path)
+            db.execute("PRAGMA foreign_keys = ON")
         try:
             yield db
             db.commit()
@@ -130,8 +165,10 @@ class AuditStore:
     def record_audit(self, event: dict[str, Any]) -> dict[str, Any]:
         item = validate_audit(event)
         with self._connect() as db:
-            db.execute(
-                "INSERT INTO audit VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            cursor = db.cursor()
+            query = "INSERT INTO audit VALUES (%s, %s, %s, %s, %s, %s, %s, %s)" if USE_POSTGRES else "INSERT INTO audit VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            cursor.execute(
+                query,
                 (item["request_id"], item["timestamp"], item["route"], int(item["degraded"]),
                  json.dumps(item["evidence_ids"]), json.dumps(item["source_versions"]),
                  item["evaluation_schema_version"], item["index_version"]),
@@ -142,18 +179,29 @@ class AuditStore:
         item = validate_feedback(signal)
         now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         with self._connect() as db:
-            if db.execute("SELECT 1 FROM audit WHERE request_id = ?", (item["request_id"],)).fetchone() is None:
+            cursor = db.cursor()
+            check_query = "SELECT 1 FROM audit WHERE request_id = %s" if USE_POSTGRES else "SELECT 1 FROM audit WHERE request_id = ?"
+            cursor.execute(check_query, (item["request_id"],))
+            if cursor.fetchone() is None:
                 raise ValidationError("unknown request_id")
-            db.execute(
+                
+            update_query = (
+                "INSERT INTO feedback VALUES (%s, %s, %s) "
+                "ON CONFLICT(request_id) DO UPDATE SET rating = excluded.rating, created_at = excluded.created_at"
+            ) if USE_POSTGRES else (
                 "INSERT INTO feedback VALUES (?, ?, ?) "
-                "ON CONFLICT(request_id) DO UPDATE SET rating = excluded.rating, created_at = excluded.created_at",
-                (item["request_id"], item["rating"], now),
+                "ON CONFLICT(request_id) DO UPDATE SET rating = excluded.rating, created_at = excluded.created_at"
             )
+            cursor.execute(update_query, (item["request_id"], item["rating"], now))
         return item
 
     def get_audit(self, request_id: str) -> dict[str, Any] | None:
         with self._connect() as db:
-            row = db.execute("SELECT * FROM audit WHERE request_id = ?", (_uuid(request_id),)).fetchone()
+            cursor = db.cursor()
+            query = "SELECT * FROM audit WHERE request_id = %s" if USE_POSTGRES else "SELECT * FROM audit WHERE request_id = ?"
+            cursor.execute(query, (_uuid(request_id),))
+            row = cursor.fetchone()
+            
         if row is None:
             return None
         return dict(zip(
@@ -167,5 +215,7 @@ class AuditStore:
             raise ValidationError("retention_days must be a positive integer")
         cutoff = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat().replace("+00:00", "Z")
         with self._connect() as db:
-            cursor = db.execute("DELETE FROM audit WHERE timestamp < ?", (cutoff,))
+            cursor = db.cursor()
+            query = "DELETE FROM audit WHERE timestamp < %s" if USE_POSTGRES else "DELETE FROM audit WHERE timestamp < ?"
+            cursor.execute(query, (cutoff,))
             return cursor.rowcount

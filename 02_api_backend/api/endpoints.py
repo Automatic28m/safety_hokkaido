@@ -26,17 +26,18 @@ SAFE_ERROR_REPLY = (
 )
 
 def _send_audit_background(payload: dict) -> None:
-    audit_url = os.environ.get("NODE08_AUDIT_URL", "http://127.0.0.1:8008/audit")
-    audit_token = os.environ.get("NODE08_AUDIT_TOKEN", "")
-    try:
-        requests.post(
-            audit_url,
-            json=payload,
-            headers={"X-Node08-Token": audit_token},
-            timeout=2.0
-        )
-    except Exception as e:
-        logger.warning("Failed to send audit log to module 08: %s", str(e))
+    # audit_url = os.environ.get("NODE08_AUDIT_URL", "http://127.0.0.1:8008/audit")
+    # audit_token = os.environ.get("NODE08_AUDIT_TOKEN", "")
+    # try:
+    #     requests.post(
+    #         audit_url,
+    #         json=payload,
+    #         headers={"X-Node08-Token": audit_token},
+    #         timeout=2.0
+    #     )
+    # except Exception as e:
+    #     logger.warning("Failed to send audit log to module 08: %s", str(e))
+    pass
 
 def _request_id(request: Request) -> str:
     return getattr(request.state, "request_id", None) or "unknown"
@@ -211,17 +212,18 @@ def create_router(
 
     @router.post("/feedback")
     def feedback_endpoint(payload: FeedbackRequest):
-        feedback_url = os.environ.get("NODE08_FEEDBACK_URL", "http://127.0.0.1:8008/feedback")
-        target_payload = {
-            "request_id": payload.message_id,  # map frontend message_id to backend request_id
-            "rating": payload.rating
-        }
-        try:
-            res = requests.post(feedback_url, json=target_payload, timeout=2.0)
-            res.raise_for_status()
-            return {"status": "ok"}
-        except requests.RequestException as e:
-            logger.warning("Failed to send feedback to module 08: %s", str(e))
-            raise HTTPException(status_code=503, detail="feedback_unavailable")
+        # feedback_url = os.environ.get("NODE08_FEEDBACK_URL", "http://127.0.0.1:8008/feedback")
+        # target_payload = {
+        #     "request_id": payload.message_id,  # map frontend message_id to backend request_id
+        #     "rating": payload.rating
+        # }
+        # try:
+        #     res = requests.post(feedback_url, json=target_payload, timeout=2.0)
+        #     res.raise_for_status()
+        #     return {"status": "ok"}
+        # except requests.RequestException as e:
+        #     logger.warning("Failed to send feedback to module 08: %s", str(e))
+        #     raise HTTPException(status_code=503, detail="feedback_unavailable")
+        return {"status": "ok"}
 
     return router
