@@ -18,14 +18,20 @@ def test_pdf_page_provenance():
 
     assert len(pdf_chunks) > 0
 
-    # Ensure page is an integer >= 1 and chunk_id has p{page}
+    # Ensure page and page_number are integers >= 1 and chunk_id has p{page}
     pages_seen = set()
     for chunk in pdf_chunks:
-        page = chunk["metadata"]["page"]
+        page = chunk["metadata"].get("page")
+        page_number = chunk["metadata"].get("page_number")
+
         assert page is not None, f"Chunk {chunk['chunk_id']} has null page"
+        assert page_number is not None, f"Chunk {chunk['chunk_id']} has null page_number"
         assert isinstance(page, int)
+        assert isinstance(page_number, int)
         assert page >= 1
+        assert page == page_number
         pages_seen.add(page)
+
         # Verify chunk_id contains the page tag
         assert f"_p{page:03d}_" in chunk["chunk_id"]
 

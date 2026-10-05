@@ -7,7 +7,8 @@ class ChunkMetadata(BaseModel):
     category: str = Field(..., description="Category or topic classification")
     situation: str = Field(..., description="Specific situation context or headline")
     url: str = Field(default="Local Document", description="URL reference or source attribution")
-    page: Optional[int] = Field(default=None, description="1-based page number for paginated documents like PDF")
+    page: Optional[int] = Field(default=None, description="1-based page number for paginated documents (e.g. PDF)")
+    page_number: Optional[int] = Field(default=None, description="Alias for page for backward compatibility")
     source_version: str = Field(default="", description="Hash or version fingerprint of source file")
     reviewed_at: str = Field(default="", description="Timestamp or date when source was reviewed")
     extra: Dict[str, Any] = Field(default_factory=dict, description="Additional custom metadata")
@@ -15,6 +16,12 @@ class ChunkMetadata(BaseModel):
     model_config = {
         "extra": "ignore"
     }
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.page is not None and self.page_number is None:
+            self.page_number = self.page
+        elif self.page_number is not None and self.page is None:
+            self.page = self.page_number
 
 
 class DocumentChunk(BaseModel):
@@ -32,6 +39,7 @@ class DocumentChunk(BaseModel):
                 "situation": self.metadata.situation,
                 "url": self.metadata.url,
                 "page": self.metadata.page,
+                "page_number": self.metadata.page,
                 "source_version": self.metadata.source_version,
                 "reviewed_at": self.metadata.reviewed_at,
                 **self.metadata.extra,

@@ -33,7 +33,8 @@ def run_index_build(
     """
     Executes the complete data integration pipeline:
     1. Checks corpus freshness and staleness.
-    2. Ingests and validates reviewed documents with page provenance.
+    2. Ingests and validates reviewed documents with page provenance (retaining page
+       and page_number for all PDF chunks).
     3. Generates dense embeddings.
     4. Constructs FAISS, BM25, and canonical chunks with manifest.
     5. Publishes artifacts atomically.
