@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { buildMockTrip } from '@/lib/mockTrip';
 
 export const maxDuration = 60;
 
@@ -44,7 +43,6 @@ export async function POST(req) {
     let tripPart = {};
     const tc = trip_context;
     if (tc?.origin && tc?.destination && /route|เส้นทาง|avoid|เลี่ยง|snow|หิมะ|detour/i.test(message)) {
-      const r = await buildMockTrip(String(tc.origin), String(tc.destination), th ? 'th' : 'en', { origin: tc.origin_coords, destination: tc.destination_coords });
       if (r.status === 200) tripPart = { ...r.body, trip: { origin: tc.origin, destination: tc.destination, datetime: tc.datetime, preferences: { ...(tc.preferences || {}), avoid_mountain: true } } };
     }
     return NextResponse.json({ ...base, ...tripPart });

@@ -207,8 +207,8 @@ export default function ChatBot({ isOpen, onClose }) {
 
 
 
-        <div className={`flex flex-1 overflow-hidden ${currentRouteIntent ? 'flex-row' : 'flex-col'}`}>
-          <div className={`flex flex-col transition-all duration-300 ease-in-out ${currentRouteIntent ? (isMapCollapsed ? 'flex-1 border-r border-gray-200' : 'w-1/2 border-r border-gray-200') : 'w-full'} h-full`}>
+        <div className={`flex flex-1 overflow-hidden ${currentRouteIntent ? 'flex-col md:flex-row' : 'flex-col'}`}>
+          <div className={`flex flex-col transition-all duration-300 ease-in-out ${currentRouteIntent ? (isMapCollapsed ? 'flex-1 border-b md:border-b-0 md:border-r border-gray-200' : 'flex-1 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-200') : 'w-full h-full'}`}>
             <div className="flex-1 p-4 overflow-y-auto overscroll-none bg-gray-50 flex flex-col gap-6">
               {messages.map((msg, index) => (
                 <div key={index} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -333,12 +333,12 @@ export default function ChatBot({ isOpen, onClose }) {
 
           {currentRouteIntent && (
             <div 
-                className={`transition-all duration-300 ease-in-out flex flex-col bg-white overflow-hidden relative border-l border-gray-200 ${isMapCollapsed ? 'w-12 cursor-pointer hover:bg-gray-50' : 'w-1/2'}`}
+                className={`transition-all duration-300 ease-in-out flex flex-col bg-white overflow-hidden relative md:border-l border-gray-200 shrink-0 ${isMapCollapsed ? 'h-14 md:h-full w-full md:w-12 cursor-pointer hover:bg-gray-50' : 'h-[45vh] md:h-full w-full md:w-1/2'}`}
                 onClick={isMapCollapsed ? () => setIsMapCollapsed(false) : undefined}
             >
               {isMapCollapsed ? (
                   <div className="h-full w-full flex items-center justify-center relative">
-                    <div className="-rotate-90 whitespace-nowrap text-blue-600 font-bold flex items-center gap-2 tracking-wide">
+                    <div className="md:-rotate-90 whitespace-nowrap text-blue-600 font-bold flex items-center gap-2 tracking-wide">
                         🗺️ Open Map
                     </div>
                   </div>
@@ -363,7 +363,7 @@ export default function ChatBot({ isOpen, onClose }) {
                       </div>
                       <button 
                           onClick={() => setIsMapCollapsed(true)}
-                          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition-colors"
+                          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition-colors rotate-90 md:rotate-0"
                           aria-label="Collapse Map"
                       >
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6" /></svg>
