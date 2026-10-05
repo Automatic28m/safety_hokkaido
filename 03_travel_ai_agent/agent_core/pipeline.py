@@ -1,0 +1,208 @@
+import requests
+from datetime import datetime
+from external_data.models import LiveDataSnapshot
+
+from data_integration.embedding_model import EmbeddingModel
+from risk_knowledge.hybrid_retriever import HybridRetriever
+from risk_knowledge.rerankers import Reranker
+from decision_engine.generator import Generator
+from external_data.tools import (
+    get_real_time_weather, 
+    get_disaster_warnings, 
+    check_train_status,
+    check_live_train_status,
+    check_flight_status,
+    check_road_status
+)
+from agent_core.query_transform import QueryTransformer
+from agent_core.memory import ConversationMemory
+from agent_core.router import Router
+from config import config
+
+
+class RAGPipeline:
+    def __init__(self):
+        print("Initializing Hokkaido RAG Pipeline components...")
+        self.embedder = EmbeddingModel()
+        self.retriever = HybridRetriever(self.embedder)
+
+        # Respect the toggle switches in config.py
+        if config.USE_RERANK:
+            self.reranker = Reranker()
+        else:
+            self.reranker = None
+
+        self.generator = Generator()
+        self.transformer = QueryTransformer()
+        self.router = Router()          # DL06: AI Router / Agent
+        print("RAG Pipeline is online and ready!")
+
+    def ask_structured(self, request: dict) -> dict:
+        query = request["original_query"]
+        raw_history = request.get("chat_history") or []
+        enabled_agents = request.get("enabled_agents")
+
+        # Exclude the last message if it's the current query to avoid duplication
+        if raw_history and raw_history[-1].get("role") == "user" and raw_history[-1].get("content") == query:
+            past_history = raw_history[:-1]
+        else:
+            past_history = raw_history
+
+        # ── MEMORY: load conversation history ───────────────────────────────
+        if config.USE_MEMORY:
+            mem = ConversationMemory()
+            for m in past_history:
+                if m.get("role") == "user":
+                    mem.add_user_message(m.get("content", ""))
+                else:
+                    mem.add_ai_message(m.get("content", ""))
+            chat_history = mem.get_history()
+        else:
+            chat_history = past_history
+
+        # ── DL06 ROUTER: classify intent before doing any heavy work ────────
+        route_result = self.router.classify(query, chat_history)
+        route = route_result["route"]   # "general" | "rag" | "realtime" | "rag+realtime"
+        route_intent = route_result.get("route_intent")
+
+        # ── DL05 QUERY REFORMULATION: make standalone if needed ─────────────
+        if config.USE_MEMORY and chat_history:
+            standalone_query = self.transformer.reformulate_query(query, chat_history)
+            print(f"[Reformulation] '{query}' → '{standalone_query}'")
+        else:
+            standalone_query = query
+
+        # ── LANGUAGE: translate to English for retrieval ─────────────────────
+        english_query = self.transformer.translate_to_english(standalone_query)
+        print(f"[Language] '{standalone_query}' → '{english_query}'")
+
+        # ── RAG RETRIEVAL: only run if the router says we need docs ─────────
+        final_chunks = []
+        if route in ("rag", "rag+realtime"):
+            print(f"[Pipeline] Route='{route}' → Activating RAG retrieval.")
+            candidates = self.retriever.retrieve(english_query, top_k=config.RETRIEVER_TOP_K)
+            if self.reranker and config.USE_RERANK:
+                final_chunks = self.reranker.rerank(english_query, candidates, top_k=config.FINAL_TOP_K)
+            else:
+                final_chunks = candidates[:config.FINAL_TOP_K]
+        else:
+            print(f"[Pipeline] Route='{route}' → Skipping RAG retrieval.")
+
+        # ── TOOLS: only activate real-time tools if the router says so ──────
+        if route in ("realtime", "rag+realtime"):
+            print(f"[Pipeline] Route='{route}' → Activating real-time tools.")
+            q_lower = english_query.lower()
+            # Smart Tool Activation to save API quotas (especially AviationStack 100/mo)
+            active_agents = {
+                "weather": "weather" in q_lower or "snow" in q_lower or "rain" in q_lower or "temp" in q_lower,
+                "disaster": True, # Always check disaster for safety
+                "train": "train" in q_lower or "jr" in q_lower or "station" in q_lower,
+                "flight": "flight" in q_lower or "airport" in q_lower or "cts" in q_lower or "plane" in q_lower,
+                "road": "road" in q_lower or "drive" in q_lower or "car" in q_lower or "bus" in q_lower or "pass" in q_lower
+            }
+            # Fallback if none matched but route is realtime
+            if not any([active_agents["weather"], active_agents["train"], active_agents["flight"], active_agents["road"]]):
+                active_agents = {"weather": True, "disaster": True, "train": True, "flight": True, "road": True}
+        else:
+            print(f"[Pipeline] Route='{route}' → Skipping real-time tools.")
+            active_agents = {"weather": False, "disaster": False, "train": False, "flight": False, "road": False}
+
+        # Allow the API caller to still override tools (e.g. frontend toggles)
+        if enabled_agents is not None:
+            for key in enabled_agents:
+                if not enabled_agents[key]:
+                    active_agents[key] = False
+
+        # ── LIVE DATA: node 03 runs the node 04 tools itself ────────────────
+        live_data_list = []
+        if active_agents.get("weather"):
+            live_data_list.append(get_real_time_weather("Sapporo"))
+        if active_agents.get("disaster"):
+            live_data_list.append(get_disaster_warnings())
+        if active_agents.get("train"):
+            # Use the new live train adapter instead of the mocked one
+            live_data_list.append(check_live_train_status("All"))
+        if active_agents.get("flight"):
+            # Smart Direction to save AviationStack quota
+            q_lower = english_query.lower()
+            flight_dir = "both"
+            if "depart" in q_lower or "leav" in q_lower or "out" in q_lower:
+                flight_dir = "departure"
+            elif "arriv" in q_lower or "land" in q_lower or "inbound" in q_lower:
+                flight_dir = "arrival"
+                
+            # Defaulting to CTS (New Chitose Airport)
+            live_data_list.append(check_flight_status("CTS", direction=flight_dir))
+        if active_agents.get("road"):
+            live_data_list.append(check_road_status("Hokkaido"))
+
+        # ── SYSTEM UI NOTE: tell Node 07 if a map was opened ─────────────────
+        if route_intent:
+            origin_en = route_intent.get('origin', 'A')
+            dest_en = route_intent.get('destination', 'B')
+            mode_en = route_intent.get('mode', 'vehicle')
+            
+            # Fetch estimation from Module 04 (OSRM)
+            from external_data.tools import get_route_estimate
+            route_info = get_route_estimate(origin_en, dest_en, mode_en)
+            duration_msg = route_info.data.get("summary", "") if hasattr(route_info, "data") else ""
+
+            ui_note = LiveDataSnapshot(
+                provider="SystemUI",
+                kind="ui_action",
+                scope={"region": "Local"},
+                status="ok",
+                fetched_at=datetime.utcnow().isoformat() + "Z",
+                expires_at=datetime.utcnow().isoformat() + "Z",
+                data={"summary": f"DO NOT apologize for lack of info. The System has ALREADY opened an interactive map for the route from {origin_en} to {dest_en} by {mode_en} on the user's screen.{duration_msg} Your ONLY task is to briefly tell the user: 'I have opened the map and navigation for you on the right side of the screen, the estimated travel time is ...'"}
+            )
+            live_data_list.append(ui_note)
+
+        # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
+        messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
+        json_string_from_groq = self._call_groq(messages)
+        decision_dict = self.generator.parse_llm_response(json_string_from_groq)
+
+        # ── RESULT: combine the decision with the chunks and live data for node 02 ──
+        return {
+            "reply": decision_dict["reply"],
+            "safety_level": decision_dict["safety_level"],
+            "evidence": [chunk.to_dict() for chunk in final_chunks],
+            "live_sources": [snapshot.to_dict() for snapshot in live_data_list],
+            "degraded": decision_dict["degraded"],
+            "notices": decision_dict["notices"],
+            "route_intent": route_intent,
+        }
+
+    def ask(self, query: str, chat_history=None, enabled_agents=None):
+        return self.ask_structured({
+            "original_query": query,
+            "chat_history": chat_history,
+            "enabled_agents": enabled_agents,
+        })["reply"]
+
+    def _call_groq(self, messages: list) -> str:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {config.GROQ_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": config.LLM_MODEL,
+                "messages": messages,
+                "max_tokens": 800,
+            },
+        )
+        if response.status_code != 200:
+            error_msg = f"LLM API Error {response.status_code}: {response.text}"
+            print(f"[ERROR] {error_msg}")
+            # If the context is too large, Groq often returns 400 or 413
+            if "context" in response.text.lower() or "limit" in response.text.lower() or response.status_code in [400, 413, 429]:
+                return "ขออภัยค่ะ ข้อมูลที่ดึงมามีขนาดใหญ่เกินกว่าที่ระบบจะประมวลผลได้ (Context Window Exceeded) กรุณาจำกัดคำถามให้เจาะจงขึ้น"
+            return f"ขออภัยค่ะ เกิดข้อผิดพลาดจาก LLM API: {response.text}"
+            
+        try:
+            return response.json()["choices"][0]["message"]["content"]
+        except KeyError:
+            return f"ขออภัยค่ะ รูปแบบข้อมูลที่ตอบกลับจาก LLM ไม่ถูกต้อง: {response.text}"

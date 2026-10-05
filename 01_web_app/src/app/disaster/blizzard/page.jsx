@@ -46,10 +46,10 @@ export default function BlizzardPage() {
             {/* Expanded Green Button */}
             <div className="bg-green-700 rounded-2xl p-4 text-white shadow-md">
               <div className="flex justify-between items-center font-bold text-lg mb-2 cursor-pointer">
-                <span>What if it's happening now?</span>
+                <span>What if it&apos;s happening now?</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
               </div>
-              <p className="text-sm opacity-90">What if it's happening now?</p>
+              <p className="text-sm opacity-90">What if it&apos;s happening now?</p>
             </div>
             
             {/* Regular Green Button */}
@@ -59,7 +59,7 @@ export default function BlizzardPage() {
           </div>
 
           <h3 className="text-2xl font-bold border-b-2 border-black pb-1 inline-block mb-6 text-black">
-            What's your situation?
+            What&apos;s your situation?
           </h3>
 
           <div className="space-y-6">
@@ -80,15 +80,15 @@ export default function BlizzardPage() {
             <div>
               <div className="flex items-center gap-2 mb-2 mt-6">
                 <svg className="text-green-700 w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-                <h4 className="text-xl font-bold text-green-700">If you're outside</h4>
+                <h4 className="text-xl font-bold text-green-700">If you&apos;re outside</h4>
               </div>
               <p className="text-gray-700">Check train and bus status before you head back — delays and cancellations are common in heavy snow. The subway is the most reliable option, as it runs underground and is less affected by snow.</p>
             </div>
 
             <div className="pl-4 border-l-2 border-gray-200 relative">
               <div className="absolute w-3 h-3 bg-green-700 rounded-full -left-[7px] top-1.5"></div>
-              <h5 className="text-lg font-bold text-gray-800 mb-1">If you can't get back</h5>
-              <p className="text-gray-700 text-sm">Don't force your way through a blizzard. Find a warm place to stay and wait it out. If you can't return to your hotel, contact them, and look for a nearby hotel if needed.</p>
+              <h5 className="text-lg font-bold text-gray-800 mb-1">If you can&apos;t get back</h5>
+              <p className="text-gray-700 text-sm">Don&apos;t force your way through a blizzard. Find a warm place to stay and wait it out. If you can&apos;t return to your hotel, contact them, and look for a nearby hotel if needed.</p>
             </div>
           </div>
         </div>

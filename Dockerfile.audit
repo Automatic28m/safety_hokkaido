@@ -1,0 +1,15 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install dependencies required for module 08, including psycopg2 for Postgres/Supabase
+RUN pip install --no-cache-dir fastapi uvicorn pydantic requests psycopg2-binary
+
+# Copy the module code
+COPY 08_recommendation_feedback /app/08_recommendation_feedback
+
+# Set the working directory to the module's path
+WORKDIR /app/08_recommendation_feedback
+
+# Run the Uvicorn server on port 8008
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8008"]

@@ -37,3 +37,18 @@ body {
 @theme inline {
   --color-green-700: #15803d;
 }
+
+/* --- Usability polish --- */
+html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid #fb923c; outline-offset: 2px; }
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, .55); }
+  70% { box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+.pulse-ring { animation: pulse-ring 2.4s infinite; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .animate-fade-in-up, .animate-fade-in { opacity: 1 !important; }
+}

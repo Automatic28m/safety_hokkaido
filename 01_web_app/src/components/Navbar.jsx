@@ -40,11 +40,18 @@ export default function Navbar() {
 
   const [isOpen, setIsOpen] = useState(false);
   const t = useTranslations('Navbar');
+  const ts = useTranslations('Shell');
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
 
+  const linkCls = (base, exact = false) => {
+    const active = exact ? pathname === base : pathname.startsWith(base);
+    return `pb-1 border-b-2 transition-opacity ${active ? 'border-orange-400' : 'border-transparent hover:opacity-70'}`;
+  };
+
   const toggleLanguage = () => {
+    setIsOpen(false);
     const nextLocale = locale === 'en' ? 'th' : 'en';
     // Replace the leading locale in the path, e.g. /en/about -> /th/about
     let newPath = pathname.replace(new RegExp(`^\\/${locale}`), `/${nextLocale}`);
@@ -68,10 +75,10 @@ export default function Navbar() {
 
           {/* Desktop Links (Hidden on mobile) */}
           <nav className="hidden md:flex items-center gap-8 lg:gap-12 font-medium text-sm lg:text-base uppercase tracking-wider">
-            <Link href={`/${locale}`} className="hover:opacity-70 transition-opacity">Home</Link>
-            <Link href={`/${locale}/disaster/earthquake`} className="hover:opacity-70 transition-opacity">{t('disaster')}</Link>
-            <Link href={`/${locale}/transportation/train`} className="hover:opacity-70 transition-opacity">{t('transportation')}</Link>
-            <Link href={`/${locale}/learning-materials`} className="hover:opacity-70 transition-opacity">{t('learningMaterials')}</Link>
+            <Link href={`/${locale}`} className={linkCls(`/${locale}`, true)}>{ts('home')}</Link>
+            <Link href={`/${locale}/disaster/earthquake`} className={linkCls(`/${locale}/disaster`)}>{t('disaster')}</Link>
+            <Link href={`/${locale}/transportation/train`} className={linkCls(`/${locale}/transportation`)}>{t('transportation')}</Link>
+            <Link href={`/${locale}/learning-materials`} className={linkCls(`/${locale}/learning-materials`)}>{t('learningMaterials')}</Link>
           </nav>
           {/* Desktop Lang Switcher (Hidden on mobile) */}
           <button onClick={toggleLanguage} aria-label="Language" className="hidden md:flex relative items-center justify-center w-10 h-10 hover:opacity-80 transition-opacity ml-8 mt-1">
@@ -135,7 +142,7 @@ export default function Navbar() {
 
                         <nav className="space-y-2 text-lg">
               <div className="mb-6">
-                <Link href={`/${locale}`} onClick={() => setIsOpen(false)} className="font-bold text-xl hover:text-orange-300 transition-colors">Top</Link>
+                <Link href={`/${locale}`} onClick={() => setIsOpen(false)} className="font-bold text-xl hover:text-orange-300 transition-colors">{ts('top')}</Link>
               </div>
 
               <NavAccordion title={t('disaster')}>
