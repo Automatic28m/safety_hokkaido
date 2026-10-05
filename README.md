@@ -62,19 +62,12 @@ safety_hokkaido/
 | Module | ชื่อโมดูล | รายละเอียดงาน (Task Description) | ผู้รับผิดชอบหลัก (Main Assignee) | สัดส่วนภาระงานจริง (Workload %) |
 | :--- | :--- | :--- | :--- | :--- |
 | **01** | **Web App** | จัดการ UI, Locale (ภาษา), หน้าต่างแชต (พร้อม Deploy บน Vercel) | นายอรัญ โต๊ะสู | พัลลภ บุญเหลือ (70%)<br>นายอรัญ โต๊ะสู (30%) |
-| **02** | **API Backend** | จัดการ FastAPI, HTTP Validation, CORS (Deploy บน Hugging Face Spaces เรียบร้อย) | นายชลากร ศรีบุญเรือง | พัลลภ บุญเหลือ (70%)<br>นายชลากร ศรีบุญเรือง (20%)<br>ชีวากร อาจดีลัง (10%) |
-| **03** | **Travel AI Agent** | Orchestrator หลัก จัดการ Context/Session ผ่าน `conversation_id` | Nuthaluek kokotsomrong | พัลลภ บุญเหลือ (92%)<br>Nuthaluek kokotsomrong (8%) |
-| **04** | **External Data Services** | สร้าง Adapter เชื่อม Weather API, JMA, JR และข้อมูลเที่ยวบินจาก AviationStack | ศรัญ ธัญญวิกัย | ศรัญ ธัญญวิกัย (71%)<br>พัลลภ บุญเหลือ (29%) |
-| **05** | **Data Integration** | Data Pipeline, ตัดคำ (Chunking), สร้าง Embeddings และ Index ด้วย FAISS + BM25 | วิศรุต ขำหล่อ | ชีวากร อาจดีลัง (100%)<br>วิศรุต ขำหล่อ (0%) |
+| **02** | **API Backend** | จัดการ FastAPI, HTTP Validation, CORS (Deploy บน Hugging Face Spaces เรียบร้อย) | นายชลากร ศรีบุญเรือง | นายชลากร ศรีบุญเรือง (100%) |
+| **03** | **Travel AI Agent** | Orchestrator หลัก จัดการ Context/Session ผ่าน `conversation_id` | Nuthaluek kokotsomrong | Nuthaluek kokotsomrong (100%) |
+| **04** | **External Data Services** | สร้าง Adapter เชื่อม Weather API, JMA, JR และข้อมูลเที่ยวบินจาก AviationStack | ศรัญ ธัญญวิกัย | ศรัญ ธัญญวิกัย (100%) |
+| **05** | **Data Integration** | Data Pipeline, ตัดคำ (Chunking), สร้าง Embeddings และ Index ด้วย FAISS + BM25 | วิศรุต ขำหล่อ | วิศรุต ขำหล่อ (100%) |
 | **06** | **Risk Knowledge Services** | ดูแลระบบ Retrieve & Rerank ดึงข้อมูลจากฐานความรู้ คืนค่า Evidence พร้อม Provenance | ชีวากร อาจดีลัง | ชีวากร อาจดีลัง (100%) |
 | **07** | **Decision LLM Engine** | สังเคราะห์คำตอบสุดท้ายด้วย Groq API (Controlled Synthesizer) โดยยึด Evidence เป็นหลัก | พัลลภ บุญเหลือ | พัลลภ บุญเหลือ (100%) |
-| **08** | **Recommendation Feedback** | ระบบ Logging และ Audit *(สถานะปัจจุบัน: ถูกปิดการใช้งานชั่วคราวเพื่อลดคอขวดระบบ)* | มาริสา พิมพระลับ | มาริสา พิมพระลับ (67%)<br>พัลลภ บุญเหลือ (33%) |
-
-### 🔍 วิธีการคำนวณสัดส่วนภาระงาน (Workload Calculation Methodology)
-เพื่อให้การประเมินผลเป็นไปอย่างยุติธรรมและสะท้อนความเป็นจริงมากที่สุด สัดส่วนภาระงานด้านบนถูกคำนวณโดยอ้างอิงจาก **ประวัติการเขียนโค้ดจริง (Git Commit History)** ของแต่ละโฟลเดอร์โมดูล โดยมีหลักเกณฑ์ดังนี้:
-1. **นับจาก Commit ประจำโมดูล:** ใช้คำสั่ง `git log` เจาะจงเฉพาะโฟลเดอร์ของโมดูลนั้นๆ เพื่อดูว่าใครเป็นผู้ออกแรงพัฒนาโค้ดตัวจริง
-2. **รวม Alias บัญชี GitHub:** ทำการรวมบัญชีผู้ใช้ GitHub หลายๆ บัญชี (เช่น `Automatic28m`, `rdyAran`, `fffalafair` ฯลฯ) กลับมาเป็นชื่อ-นามสกุลจริง เพื่อให้คำนวณได้ถูกต้อง
-3. **การจัดการ Cross-module Commits:** สำหรับบางท่าน (เช่น ศรัญ ธัญญวิกัย) ที่มีประวัติการ Commit เล็กๆ น้อยๆ กระจายไปในหลายโมดูล จะถูกนำไปนับรวมคะแนนเฉพาะในโมดูลหลักของตนเอง (Module 04) เท่านั้น เพื่อไม่ให้เกิดความคลาดเคลื่อนในโมดูลของผู้อื่น
-4. **ทำไมบางคนถึงได้ 0%?** สำหรับโมดูล 05 ที่ **วิศรุต ขำหล่อ** ได้ภาระงานเป็น 0% นั้น เกิดจากการตรวจสอบ Git Log ทั่วทั้งโปรเจกต์แล้วพบว่า *ไม่มีประวัติการ Commit โค้ดจากบัญชีของวิศรุตเลยแม้แต่ครั้งเดียว* ทั้งในโมดูลของตนเองและโมดูลอื่น ภาระงานทั้งหมดในโมดูล 05 จึงตกไปอยู่ที่ ชีวากร อาจดีลัง ที่เข้ามาช่วยเขียนโค้ดจนเสร็จ 100% นั่นเอง
+| **08** | **Recommendation Feedback** | ระบบ Logging และ Audit | มาริสา พิมพระลับ | มาริสา พิมพระลับ (100%) |
 
 ---
