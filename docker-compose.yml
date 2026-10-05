@@ -26,8 +26,8 @@ services:
       dockerfile: Dockerfile.audit
     ports:
       - "8008:8008"
-    # environment:
-    #   - DATABASE_URL=postgresql://neondb_owner:npg_swNt2XIj1dCE@ep-morning-sunset-azt0a9ge-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+    environment:
+      - DATABASE_URL=postgresql://neondb_owner:npg_swNt2XIj1dCE@ep-morning-sunset-azt0a9ge-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
     volumes:
       - ./08_recommendation_feedback:/app/08_recommendation_feedback
     restart: unless-stopped
