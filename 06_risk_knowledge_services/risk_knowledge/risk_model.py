@@ -2,7 +2,7 @@ from typing import Dict, Any, List, Optional, Tuple, Union
 from datetime import datetime, timezone
 import re
 
-from risk_knowledge.models import RiskLevel, RiskAssessment, RouteInfo
+from risk_knowledge.models import RiskLevel, RiskTrend, RiskAssessment, RouteInfo
 
 
 class LocalRiskModel:
@@ -18,6 +18,23 @@ class LocalRiskModel:
         "disaster": 0.45,
         "weather": 0.35,
         "transit": 0.20,
+    }
+
+    # Mountain Passes & Coastal Hazard Catalogs
+    HOKKAIDO_MOUNTAIN_PASSES = {
+        "nakayama": ("Nakayama Pass (Route 230)", "Steep high-elevation pass between Sapporo and Rusutsu/Niseko; prone to violent whiteouts and black ice"),
+        "nissho": ("Nissho Pass (Route 274)", "Rugged pass across Hidaka mountains connecting to Tokachi plain; severe drifting snow hazard"),
+        "sekihoku": ("Sekihoku Pass (Route 39)", "Northern mountain divide between Kamikawa and Kitami (1,050m) with deep sub-zero conditions"),
+        "mikuni": ("Mikuni Pass (Route 273)", "Highest national highway pass in Hokkaido (1,139m) with persistent freezing"),
+        "karikachi": ("Karikachi Pass (Route 38)", "Mountain divide between Minamifurano and Shintoku subject to strong gusts"),
+    }
+
+    HOKKAIDO_COASTAL_CORRIDORS = {
+        "otaru": ("Ishikari Bay / Otaru Coastal Corridor", "Exposed Sea of Japan coastal route subject to sudden convective snow squalls"),
+        "yoichi": ("Shakotan Peninsula / Yoichi Coastal Corridor", "High coastal sea-spray and sudden blizzard whiteout hazard"),
+        "rumoi": ("Rumoi / Ororon Sea Corridor", "Severe north-westerly gale winds directly off Japan Sea"),
+        "wakkanai": ("Soya Cape & Strait Corridor", "Arctic coastal winds with severe windchill"),
+        "erimo": ("Cape Erimo Gale Corridor", "One of Japan's windiest coastal corridors"),
     }
 
     # Weather thresholds
@@ -302,7 +319,126 @@ class LocalRiskModel:
         return score, factors, closed_segments, True
 
     # ──────────────────────────────────────────────────────────────────────────
-    # 4. Comprehensive Multi-Factor Evaluation
+    # 4. Temporal Forecast & Geo-Corridor Evaluation
+    # ──────────────────────────────────────────────────────────────────────────
+    def evaluate_forecast_trend(
+        self, weather_snapshot: Any, current_weather_score: float
+    ) -> Tuple[RiskTrend, Optional[float], Optional[str], List[str]]:
+        """
+        Analyzes upcoming 3-24 hour hourly forecast to determine risk trajectory.
+        Returns: (trend, forecasted_peak_score, forecasted_peak_window, factors)
+        """
+        data = self._extract_dict(weather_snapshot)
+        if not data or not isinstance(data, dict):
+            return RiskTrend.UNKNOWN, None, None, []
+
+        hourly = data.get("hourly_forecast")
+        if not hourly or not isinstance(hourly, list):
+            return RiskTrend.UNKNOWN, None, None, []
+
+        forecast_scores: List[Tuple[float, str, str]] = []
+        for h in hourly[:12]:
+            if not isinstance(h, dict):
+                continue
+            time_str = h.get("time_utc") or "upcoming hours"
+            temp = h.get("temperature_c")
+            precip = h.get("precipitation_total_mm")
+            summary = str(h.get("summary") or "").lower()
+
+            h_score = 0.0
+            h_cause = "normal conditions"
+            if "blizzard" in summary or "whiteout" in summary:
+                h_score = 0.85
+                h_cause = "blizzard conditions"
+            elif precip is not None:
+                try:
+                    p = float(precip)
+                    if p >= self.SNOW_HEAVY_HOURLY_MM:
+                        h_score = max(h_score, 0.80)
+                        h_cause = f"heavy snowfall ({p:.1f} mm/h)"
+                    elif p >= 4.0:
+                        h_score = max(h_score, 0.50)
+                        h_cause = f"moderate snowfall ({p:.1f} mm/h)"
+                except (ValueError, TypeError):
+                    pass
+
+            if temp is not None:
+                try:
+                    t = float(temp)
+                    if t <= self.TEMP_EXTREME_COLD_C:
+                        h_score = max(h_score, 0.75)
+                        h_cause = f"severe freezing ({t:.1f}°C)"
+                except (ValueError, TypeError):
+                    pass
+
+            forecast_scores.append((round(h_score, 2), time_str, h_cause))
+
+        if not forecast_scores:
+            return RiskTrend.STABLE, None, None, []
+
+        peak_score, peak_time, peak_cause = max(forecast_scores, key=lambda x: x[0])
+
+        factors: List[str] = []
+        trend = RiskTrend.STABLE
+
+        if peak_score >= current_weather_score + 0.20 or (peak_score >= 0.70 and current_weather_score < 0.60):
+            trend = RiskTrend.DETERIORATING
+            factors.append(
+                f"Hourly forecast indicates deteriorating conditions: risk expected to peak at {peak_score:.2f} ({peak_cause}) around {peak_time}"
+            )
+        elif current_weather_score >= 0.50 and peak_score <= current_weather_score - 0.20:
+            trend = RiskTrend.IMPROVING
+            factors.append(
+                f"Hourly forecast indicates improving conditions: risk expected to ease to {peak_score:.2f} within 6-12 hours"
+            )
+        else:
+            trend = RiskTrend.STABLE
+
+        return trend, peak_score, peak_time, factors
+
+    def evaluate_corridor_risk(
+        self, route_context: Optional[Dict[str, Any]], base_score: float, weather_score: float
+    ) -> Tuple[float, List[str]]:
+        """
+        Detects if route passes through hazardous mountain passes or coastal blizzard zones
+        and applies elevation/coastal hazard multipliers.
+        """
+        if not route_context or not isinstance(route_context, dict):
+            return base_score, []
+
+        ctx_str = " ".join([
+            str(route_context.get("origin") or ""),
+            str(route_context.get("start_city") or ""),
+            str(route_context.get("destination") or ""),
+            str(route_context.get("destination_city") or ""),
+            str(route_context.get("via") or ""),
+            str(route_context.get("route") or ""),
+        ]).lower()
+
+        factors: List[str] = []
+        adjusted_score = base_score
+
+        # Check mountain passes
+        for kw, (pass_name, hazard_desc) in self.HOKKAIDO_MOUNTAIN_PASSES.items():
+            if kw in ctx_str:
+                factors.append(f"High-elevation mountain pass detected: {pass_name}. {hazard_desc}")
+                if weather_score >= 0.20 or base_score >= 0.30:
+                    adjusted_score = min(1.0, round(max(base_score * 1.25, base_score + 0.15), 2))
+                    factors.append("Pass corridor elevation multiplier applied (+15-25% winter risk elevation)")
+                break
+
+        # Check coastal blizzard corridors
+        for kw, (corridor_name, hazard_desc) in self.HOKKAIDO_COASTAL_CORRIDORS.items():
+            if kw in ctx_str:
+                factors.append(f"Coastal blizzard corridor detected: {corridor_name}. {hazard_desc}")
+                if weather_score >= 0.40 or base_score >= 0.40:
+                    adjusted_score = min(1.0, round(max(adjusted_score, adjusted_score * 1.15), 2))
+                break
+
+        return adjusted_score, factors
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 5. Comprehensive Multi-Factor Evaluation
     # ──────────────────────────────────────────────────────────────────────────
     def evaluate(
         self,
@@ -336,6 +472,7 @@ class LocalRiskModel:
             assessment = RiskAssessment(
                 risk_level=RiskLevel.UNKNOWN,
                 risk_score=0.0,
+                risk_trend=RiskTrend.UNKNOWN,
                 primary_factors=["Real-time environmental and transit feeds are unavailable; risk cannot be determined safely."],
                 evaluated_at=datetime.now(timezone.utc).isoformat(),
             )
@@ -359,14 +496,35 @@ class LocalRiskModel:
         weighted_score = sum(norm_weights[k] * sub_scores[k] for k in available_feeds)
 
         # Critical single-factor fail-safe override:
-        # If an extreme disaster (tsunami/major quake) or whiteout blizzard is detected,
-        # never let the risk drop below HIGH (>= 0.70).
-        if d_score >= 0.85 or w_score >= 0.85:
+        # If an extreme disaster (tsunami/major quake) or violent blizzard is detected,
+        # never let the risk drop below catastrophic (>= 0.90) or HIGH (>= 0.75).
+        if d_score >= 0.90 or w_score >= 0.90:
+            final_score = max(weighted_score, 0.90)
+        elif d_score >= 0.85 or w_score >= 0.85:
             final_score = max(weighted_score, 0.75)
         elif t_score >= 0.90:
             final_score = max(weighted_score, 0.70)
         else:
             final_score = min(1.0, max(0.0, weighted_score))
+
+        final_score = round(final_score, 2)
+
+        # Temporal forecast trend evaluation (Step 2.1)
+        trend, peak_score, peak_window, forecast_factors = self.evaluate_forecast_trend(
+            weather_snapshot=weather_snapshot,
+            current_weather_score=w_score,
+        )
+        all_factors.extend(forecast_factors)
+
+        # Geo-spatial corridor evaluation (Step 2.2)
+        corridor_score, corridor_factors = self.evaluate_corridor_risk(
+            route_context=route_context,
+            base_score=final_score,
+            weather_score=w_score,
+        )
+        if corridor_score > final_score:
+            final_score = corridor_score
+        all_factors.extend(corridor_factors)
 
         final_score = round(final_score, 2)
 
@@ -384,6 +542,9 @@ class LocalRiskModel:
         assessment = RiskAssessment(
             risk_level=level,
             risk_score=final_score,
+            risk_trend=trend,
+            forecasted_peak_score=peak_score,
+            forecasted_peak_window=peak_window,
             primary_factors=all_factors,
             evaluated_at=datetime.now(timezone.utc).isoformat(),
         )

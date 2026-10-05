@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { buildMockTrip } from '@/lib/mockTrip';
 
 export const maxDuration = 60;
 
@@ -16,11 +15,6 @@ export async function POST(req) {
   const origin = clean(body?.origin), destination = clean(body?.destination);
   if (!origin || !destination) return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
   const locale = body?.locale === 'th' ? 'th' : 'en';
-
-  if (process.env.MOCK_BACKEND === 'true') {
-    const r = await buildMockTrip(origin, destination, locale, { origin: posOf(body?.origin_coords), destination: posOf(body?.destination_coords) });
-    return NextResponse.json(r.body, { status: r.status });
-  }
 
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 55000);
@@ -39,13 +33,6 @@ export async function POST(req) {
     });
     let data = null;
     try { data = await upstream.json(); } catch { /* non-JSON */ }
-    
-    // Fallback to mock trip if backend endpoint is not implemented (404)
-    if (upstream.status === 404 && data?.error !== 'location_not_found') {
-      console.log('Backend /route not implemented, falling back to mock mapbox route');
-      const r = await buildMockTrip(origin, destination, locale, { origin: posOf(body?.origin_coords), destination: posOf(body?.destination_coords) });
-      return NextResponse.json(r.body, { status: r.status });
-    }
 
     if (!upstream.ok || !data) {
       // A 404 from the backend normally means "endpoint not implemented yet", not "place not found".
@@ -61,3 +48,4 @@ export async function POST(req) {
     clearTimeout(timer);
   }
 }
+
