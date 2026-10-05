@@ -104,96 +104,182 @@ export default async function Home({ params }) {
       {/* Main Content Container */}
       <div className="w-full max-w-md md:max-w-5xl lg:max-w-6xl mx-auto relative z-20 -mt-24 md:-mt-20 px-4 md:px-0">
         
-        {/* Weather & Earthquake Grid */}
-        <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-4 md:mb-6 md:w-3/4 lg:w-2/3">
+        {/* Top Section Layout */}
+        <div className="flex flex-col lg:flex-row gap-4 md:gap-6 mb-8 md:mb-12">
           
-          {/* Weather Card */}
-          <section className="w-full md:w-1/2 bg-white rounded-3xl p-6 shadow-xl flex-1">
-            <div className="flex items-center gap-2 mb-2 text-gray-600">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-              </svg>
-              <span className="text-sm font-medium">{t('location')}</span>
-            </div>
-            <h2 className="text-2xl font-bold text-green-700 mb-4">
-              {t('weatherTitle')}
-            </h2>
+          {/* Left Column (Weather, Quake, Emergency) */}
+          <div className="flex flex-col gap-4 md:gap-6 lg:w-2/3">
             
-            {currentTemp !== null ? (
-              <div className={`bg-gradient-to-r ${GRADIENTS[kind]} rounded-2xl p-6 text-white flex flex-col relative overflow-hidden`}>
-                <div className="relative z-10">
-                  <div className="text-6xl font-black mb-1">{currentTemp}°C</div>
-                  <div className="text-base font-bold">{tx(`weather.${kind}`)}</div>
-                  {maxTemp !== null && minTemp !== null && (
-                    <div className="text-sm font-bold tracking-wide mt-2 opacity-90">
-                      {t('weatherMax')} {maxTemp}°C, {t('weatherMin')} {minTemp}°C
+            {/* Weather & Earthquake Grid */}
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+              
+              {/* Weather Card */}
+              <section className="w-full md:w-1/2 bg-white rounded-3xl p-6 shadow-xl flex-1">
+                <div className="flex items-center gap-2 mb-2 text-gray-600">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <span className="text-sm font-medium">{t('location')}</span>
+                </div>
+                <h2 className="text-2xl font-bold text-green-700 mb-4">
+                  {t('weatherTitle')}
+                </h2>
+                
+                {currentTemp !== null ? (
+                  <div className={`bg-gradient-to-r ${GRADIENTS[kind]} rounded-2xl p-6 text-white flex flex-col relative overflow-hidden`}>
+                    <div className="relative z-10">
+                      <div className="text-6xl font-black mb-1">{currentTemp}°C</div>
+                      <div className="text-base font-bold">{tx(`weather.${kind}`)}</div>
+                      {maxTemp !== null && minTemp !== null && (
+                        <div className="text-sm font-bold tracking-wide mt-2 opacity-90">
+                          {t('weatherMax')} {maxTemp}°C, {t('weatherMin')} {minTemp}°C
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="absolute right-2 top-2 opacity-30">
-                  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    {ICONS[kind]}
-                  </svg>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gray-200 rounded-2xl p-6 text-gray-600 text-center flex items-center justify-center h-full min-h-[120px]">
-                {tx('weatherUnavailable')}
-              </div>
-            )}
-          </section>
+                    <div className="absolute right-2 top-2 opacity-30">
+                      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        {ICONS[kind]}
+                      </svg>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-200 rounded-2xl p-6 text-gray-600 text-center flex items-center justify-center h-full min-h-[120px]">
+                    {tx('weatherUnavailable')}
+                  </div>
+                )}
+              </section>
 
-          {/* Earthquake Card */}
-          <section className="w-full md:w-1/2 bg-white rounded-3xl p-6 shadow-xl flex-1">
-            <div className="flex items-center gap-2 mb-2 text-gray-600">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-              </svg>
-              <span className="text-sm font-medium">{t('location')}</span>
+              {/* Earthquake Card */}
+              <section className="w-full md:w-1/2 bg-white rounded-3xl p-6 shadow-xl flex-1">
+                <div className="flex items-center gap-2 mb-2 text-gray-600">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <span className="text-sm font-medium">{t('location')}</span>
+                </div>
+                <h2 className="text-2xl font-bold text-green-700 mb-4">
+                  {t('recentEarthquakeTitle')}
+                </h2>
+                
+                {earthquake ? (
+                  <div className="bg-gradient-to-r from-red-500 to-orange-400 rounded-2xl p-6 text-white flex flex-col relative overflow-hidden">
+                    <div className="relative z-10">
+                      <div className="text-5xl font-black mb-1">M {quakeMag}</div>
+                      <div className="text-sm font-bold tracking-wide mt-2 opacity-90 truncate" title={earthquake.properties.place}>
+                        {earthquake.properties.place}
+                      </div>
+                      <div className="text-xs font-bold tracking-wide mt-1 opacity-75">
+                        {new Date(earthquake.properties.time).toLocaleString(locale === 'th' ? 'th-TH' : 'en-US', {
+                          timeZone: 'Asia/Tokyo',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                    <div className="absolute right-[-10px] bottom-[-20px] opacity-20">
+                      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12h4l2-9 5 18 3-9h6"/>
+                      </svg>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-200 rounded-2xl p-6 text-gray-500 text-center flex items-center justify-center h-full min-h-[120px]">
+                    {t('noEarthquakeData')}
+                  </div>
+                )}
+              </section>
+
             </div>
-            <h2 className="text-2xl font-bold text-green-700 mb-4">
-              {t('recentEarthquakeTitle')}
-            </h2>
+
+            {/* Emergency quick call */}
+            <section className="w-full bg-red-600 text-white rounded-3xl p-4 md:p-5 shadow-lg flex flex-wrap items-center gap-3">
+              <span className="font-bold flex-1 min-w-[140px]">{tx('emergencyBar')}</span>
+              <a href="tel:119" className="bg-white text-red-600 font-black rounded-full px-5 py-2 hover:scale-105 transition-transform">📞 119 <span className="font-medium text-sm">{tx('fireAmbulance')}</span></a>
+              <a href="tel:110" className="bg-white text-red-600 font-black rounded-full px-5 py-2 hover:scale-105 transition-transform">📞 110 <span className="font-medium text-sm">{tx('police')}</span></a>
+              <Link href={`/${locale}/emergency-contact`} className="underline font-semibold text-sm">{tx('moreContacts')}</Link>
+            </section>
             
-            {earthquake ? (
-              <div className="bg-gradient-to-r from-red-500 to-orange-400 rounded-2xl p-6 text-white flex flex-col relative overflow-hidden">
-                <div className="relative z-10">
-                  <div className="text-5xl font-black mb-1">M {quakeMag}</div>
-                  <div className="text-sm font-bold tracking-wide mt-2 opacity-90 truncate" title={earthquake.properties.place}>
-                    {earthquake.properties.place}
-                  </div>
-                  <div className="text-xs font-bold tracking-wide mt-1 opacity-75">
-                    {new Date(earthquake.properties.time).toLocaleString(locale === 'th' ? 'th-TH' : 'en-US', {
-                      timeZone: 'Asia/Tokyo',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </div>
-                </div>
-                <div className="absolute right-[-10px] bottom-[-20px] opacity-20">
-                  <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 12h4l2-9 5 18 3-9h6"/>
-                  </svg>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gray-200 rounded-2xl p-6 text-gray-500 text-center flex items-center justify-center h-full min-h-[120px]">
-                {t('noEarthquakeData')}
-              </div>
-            )}
-          </section>
+          </div>
 
+          {/* Right Column (AI Capabilities) */}
+          <div className="w-full lg:w-1/3 flex">
+            <section className="w-full bg-white/95 backdrop-blur-sm rounded-3xl p-6 shadow-xl border-2 border-[#1bb38e] relative overflow-hidden flex flex-col justify-between group hover:shadow-2xl transition-shadow">
+              
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#0c59cc] to-[#1bb38e] rounded-2xl flex items-center justify-center shadow-lg transform -rotate-6 group-hover:rotate-0 transition-transform">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/>
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-black text-gray-800 tracking-tight uppercase leading-none">
+                    {t('aiTitle')}
+                    <span className="block text-[10px] font-bold text-gray-400 mt-1 tracking-widest">{t('aiSubtitle')}</span>
+                  </h2>
+                </div>
+                
+                <ul className="space-y-4">
+                  
+                  {/* Feature 1 */}
+                  <li className="flex gap-3 items-start">
+                    <div className="mt-1 min-w-[24px] text-[#0c59cc]">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-800 text-sm leading-tight mb-0.5">{t('aiFeature1Title')}</h3>
+                      <p className="text-xs text-gray-500 leading-snug">{t('aiFeature1Desc')}</p>
+                    </div>
+                  </li>
+                  
+                  {/* Feature 2 */}
+                  <li className="flex gap-3 items-start">
+                    <div className="mt-1 min-w-[24px] text-[#1bb38e]">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 4-4 4-2.5-1-2 1.5L4 20l3.5-3.5 1.5-2 4-4 4 6l1.2-.7c.4-.2.7-.6.6-1.1z"/></svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-800 text-sm leading-tight mb-0.5">{t('aiFeature2Title')}</h3>
+                      <p className="text-xs text-gray-500 leading-snug">{t('aiFeature2Desc')}</p>
+                    </div>
+                  </li>
+                  
+                  {/* Feature 3 */}
+                  <li className="flex gap-3 items-start">
+                    <div className="mt-1 min-w-[24px] text-orange-500">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h4l2-9 5 18 3-9h6"/></svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-800 text-sm leading-tight mb-0.5">{t('aiFeature3Title')}</h3>
+                      <p className="text-xs text-gray-500 leading-snug">{t('aiFeature3Desc')}</p>
+                    </div>
+                  </li>
+
+                  {/* Feature 4 */}
+                  <li className="flex gap-3 items-start">
+                    <div className="mt-1 min-w-[24px] text-red-500">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-800 text-sm leading-tight mb-0.5">{t('aiFeature4Title')}</h3>
+                      <p className="text-xs text-gray-500 leading-snug">{t('aiFeature4Desc')}</p>
+                    </div>
+                  </li>
+
+                </ul>
+              </div>
+
+              {/* Decorative Background Icon */}
+              <div className="absolute -right-12 -bottom-12 opacity-[0.03]">
+                <svg width="250" height="250" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/>
+                </svg>
+              </div>
+              
+            </section>
+          </div>
+          
         </div>
-
-        {/* Emergency quick call */}
-        <section className="md:w-3/4 lg:w-2/3 mb-8 md:mb-12 bg-red-600 text-white rounded-3xl p-4 md:p-5 shadow-lg flex flex-wrap items-center gap-3">
-          <span className="font-bold flex-1 min-w-[140px]">{tx('emergencyBar')}</span>
-          <a href="tel:119" className="bg-white text-red-600 font-black rounded-full px-5 py-2 hover:scale-105 transition-transform">📞 119 <span className="font-medium text-sm">{tx('fireAmbulance')}</span></a>
-          <a href="tel:110" className="bg-white text-red-600 font-black rounded-full px-5 py-2 hover:scale-105 transition-transform">📞 110 <span className="font-medium text-sm">{tx('police')}</span></a>
-          <Link href={`/${locale}/emergency-contact`} className="underline font-semibold text-sm">{tx('moreContacts')}</Link>
-        </section>
 
         {/* Scroll indicator */}
         <div className="flex flex-col items-center text-blue-600 animate-bounce mb-8">
