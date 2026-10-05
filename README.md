@@ -26,9 +26,9 @@
 *   **Source Citation:** ทุกคำตอบจะมีการแนบ `Evidence ID` หรือ `Live Source` กลับมา เพื่อให้ตรวจสอบย้อนหลังได้เสมอ
 
 ## 5. สถาปัตยกรรมและการนำขึ้นระบบจริง (Modern Deployment Architecture)
-*   **Frontend (Next.js):** จัดเตรียมและนำขึ้นระบบจริง (Deploy) บนแพลตฟอร์ม **Vercel**
-*   **Backend API (FastAPI):** นำขึ้นระบบจริงบน **Hugging Face Spaces (Gradio SDK)** เพื่อปลดล็อกข้อจำกัดด้าน RAM (ใช้เซิร์ฟเวอร์ 16GB ฟรี) ทำให้รองรับโมเดล RAG ขนาดใหญ่ได้
-*   *(อัปเดต)* **Audit & Feedback Module (Node 08):** ปัจจุบันถูก **ปิดการใช้งานชั่วคราว (Deactivated)** ในระดับ Production เพื่อลดข้อจำกัดเรื่องคอขวดของการเชื่อมต่อฐานข้อมูลภายนอก (Supabase/Neon) และลดภาระของระบบภาพรวม
+*   **Hostinger VPS (Docker Compose):** นำระบบทั้งหมด (Frontend, Backend, AI Models) ขึ้นใช้งานจริงบนแพลตฟอร์ม **Hostinger VPS (Ubuntu + Docker)** เพื่อรองรับการทำงานของโมเดล RAG และเซิร์ฟเวอร์ที่ต้องการ RAM สูง (KVM 2 / 4GB RAM)
+*   **Reverse Proxy & Security:** จัดการ Routing ด้วย Nginx และเข้ารหัส HTTPS ด้วย Certbot
+*   *(อัปเดต)* **Audit & Feedback Module (Node 08):** รองรับฐานข้อมูลแบบ Local (SQLite) เพื่อแก้ปัญหาคอขวดของการเชื่อมต่อฐานข้อมูลภายนอก (Supabase/Neon) ในฝั่ง Local Deployment
 
 ---
 
@@ -49,10 +49,9 @@ safety_hokkaido/
 ├── 07_decision_llm_engine/         # โมดูลที่ 7: ระบบสังเคราะห์คำตอบ (Controlled Synthesizer ด้วย Groq)
 ├── 08_recommendation_feedback/     # โมดูลที่ 8: ระบบเก็บข้อมูลและประเมินผล (ปิดการใช้งานชั่วคราว)
 ├── .github/                        # (ซ่อน) ระบบ CI/CD และ Automation
-├── app.py & requirements.txt       # โค้ดสำหรับรัน Backend บน Hugging Face Spaces (Gradio)
-├── docker-compose.yml              # ไฟล์สำหรับการทดสอบรันด้วย Docker แบบ Local
-├── README.md                       # เอกสารแนะนำโปรเจกต์
-└── runtime.py                      # สคริปต์รัน Environment กลาง
+├── docker-compose.yml              # ไฟล์สำหรับ Deployment รันระบบผ่าน Docker บน Hostinger VPS
+├── DEPLOYMENT.md                   # คู่มือการนำระบบขึ้น Hostinger VPS
+└── README.md                       # เอกสารแนะนำโปรเจกต์
 ```
 
 # การแบ่งงานและมอบหมายหน้าที่ (Module Assignment & Workload)
@@ -61,12 +60,12 @@ safety_hokkaido/
 
 | Module | ชื่อโมดูล | รายละเอียดงาน (Task Description) | ผู้รับผิดชอบหลัก (Main Assignee) | สัดส่วนภาระงานจริง (Workload %) |
 | :--- | :--- | :--- | :--- | :--- |
-| **01** | **Web App** | จัดการ UI, Locale (ภาษา), หน้าต่างแชต (พร้อม Deploy บน Vercel) | นายอรัญ โต๊ะสู | พัลลภ บุญเหลือ (70%)<br>นายอรัญ โต๊ะสู (30%) |
-| **02** | **API Backend** | จัดการ FastAPI, HTTP Validation, CORS (Deploy บน Hugging Face Spaces เรียบร้อย) | นายชลากร ศรีบุญเรือง | นายชลากร ศรีบุญเรือง (100%) |
+| **01** | **Web App** | จัดการ UI, Locale, หน้าต่างแชต (ลบ Mapbox API และปรับ Transportation เป็น Static Layout) | นายอรัญ โต๊ะสู | พัลลภ บุญเหลือ (70%)<br>นายอรัญ โต๊ะสู (30%) |
+| **02** | **API Backend** | จัดการ FastAPI, HTTP Validation, CORS, และ Proxy | นายชลากร ศรีบุญเรือง | นายชลากร ศรีบุญเรือง (100%) |
 | **03** | **Travel AI Agent** | Orchestrator หลัก จัดการ Context/Session ผ่าน `conversation_id` | Nuthaluek kokotsomrong | Nuthaluek kokotsomrong (100%) |
 | **04** | **External Data Services** | สร้าง Adapter เชื่อม Weather API, JMA, JR และข้อมูลเที่ยวบินจาก AviationStack | ศรัญ ธัญญวิกัย | ศรัญ ธัญญวิกัย (100%) |
-| **05** | **Data Integration** | Data Pipeline, ตัดคำ (Chunking), สร้าง Embeddings และ Index ด้วย FAISS + BM25 | วิศรุต ขำหล่อ | วิศรุต ขำหล่อ (100%) |
-| **06** | **Risk Knowledge Services** | ดูแลระบบ Retrieve & Rerank ดึงข้อมูลจากฐานความรู้ คืนค่า Evidence พร้อม Provenance | ชีวากร อาจดีลัง | ชีวากร อาจดีลัง (100%) |
+| **05** | **Data Integration** | Data Pipeline, Page Provenance, Stable IDs, ตัดคำ (Chunking), FAISS + BM25 | วิศรุต ขำหล่อ | ชีวากร อาจดีลัง (100%) |
+| **06** | **Risk Knowledge Services** | ดูแลระบบ Retrieve & Rerank, Unified Facade, การพยากรณ์ความเสี่ยงล่วงหน้า, ตัวคูณจุดเสี่ยง | ชีวากร อาจดีลัง | ชีวากร อาจดีลัง (100%) |
 | **07** | **Decision LLM Engine** | สังเคราะห์คำตอบสุดท้ายด้วย Groq API (Controlled Synthesizer) โดยยึด Evidence เป็นหลัก | พัลลภ บุญเหลือ | พัลลภ บุญเหลือ (100%) |
 | **08** | **Recommendation Feedback** | ระบบ Logging และ Audit | มาริสา พิมพระลับ | มาริสา พิมพระลับ (100%) |
 
