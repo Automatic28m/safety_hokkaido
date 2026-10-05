@@ -8,29 +8,29 @@ services:
       - "8000:8000"
     env_file:
       - ./02_api_backend/.env
-    # environment:
-      # - NODE08_AUDIT_URL=http://audit:8008/audit
-      # - NODE08_FEEDBACK_URL=http://audit:8008/feedback
-      # - NODE08_AUDIT_TOKEN=safety-audit-token-123
+    environment:
+      - NODE08_AUDIT_URL=http://audit:8008/audit
+      - NODE08_FEEDBACK_URL=http://audit:8008/feedback
+      - NODE08_AUDIT_TOKEN=safety-audit-token-123
     volumes:
       - ./04_external_data_services/data:/app/04_external_data_services/data
       - ./05_rag_retrieval/vector_db:/app/05_rag_retrieval/vector_db
       - ./08_audit_logging/data:/app/08_audit_logging/data
     restart: unless-stopped
-    # depends_on:
-    #   - audit
+    depends_on:
+      - audit
 
-#   audit:
-#     build:
-#       context: .
-#       dockerfile: Dockerfile.audit
-#     ports:
-#       - "8008:8008"
-#     environment:
-#       - DATABASE_URL=postgresql://neondb_owner:npg_swNt2XIj1dCE@ep-morning-sunset-azt0a9ge-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-#     volumes:
-#       - ./08_recommendation_feedback:/app/08_recommendation_feedback
-#     restart: unless-stopped
+  audit:
+    build:
+      context: .
+      dockerfile: Dockerfile.audit
+    ports:
+      - "8008:8008"
+    environment:
+      - DATABASE_URL=postgresql://neondb_owner:npg_swNt2XIj1dCE@ep-morning-sunset-azt0a9ge-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+    volumes:
+      - ./08_recommendation_feedback:/app/08_recommendation_feedback
+    restart: unless-stopped
 
   frontend:
     build:
