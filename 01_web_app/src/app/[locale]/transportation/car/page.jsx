@@ -33,81 +33,87 @@ export default async function RentalCarPage({ params }) {
         <div className="bg-white rounded-b-3xl shadow-md p-6 -mt-8 pt-8 mb-12">
           <h2 className="font-mittraphap text-4xl font-black text-black mb-4 uppercase">{t('title')}</h2>
           
-          <div className="relative w-full aspect-[2/1] md:aspect-[3/1] mb-6">
-            <TripPlanner mode="car"/>
-          </div>
-
-          <div className="relative mb-6">
-            <div className="inline-block bg-[#0047b3] text-white font-bold py-1.5 px-4 rounded-md text-lg">
-              {tTrans('howToRide')}
-            </div>
-            {/* Tooltip triangle */}
-            <div className="absolute w-3 h-3 bg-[#0047b3] rotate-45 left-6 -bottom-1"></div>
-          </div>
-
-          {/* Timeline Steps */}
-          <div className="relative pl-8 space-y-8 mt-8">
-            {/* Vertical dashed line */}
-            <div className="absolute left-2 top-6 bottom-6 w-px border-l-2 border-dashed border-gray-300"></div>
-
-            {/* Step 1 */}
-            <div className="relative">
-              <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
-                <Image src="/icons/license.svg" width={24} height={24} alt="icon" />
-              </div>
-              <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step1')}</h3>
-              <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step1Title')}</h4>
-              <p className="ml-4 text-gray-700 text-sm">
-                {t('step1Desc')}
-              </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left side: Image */}
+            <div className="relative w-full min-h-[300px] lg:min-h-[400px]">
+              <Image src="/illustrations/Car.png" alt="Rental Car" fill className="object-contain" />
             </div>
 
-            {/* Step 2 */}
-            <div className="relative">
-              <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
-                <Image src="/icons/circle-key.svg" width={24} height={24} alt="icon" />
+            {/* Right side: How to ride */}
+            <div>
+              <div className="relative mb-6">
+                <div className="inline-block bg-[#0047b3] text-white font-bold py-1.5 px-4 rounded-md text-lg">
+                  {tTrans('howToRide')}
+                </div>
+                {/* Tooltip triangle */}
+                <div className="absolute w-3 h-3 bg-[#0047b3] rotate-45 left-6 -bottom-1"></div>
               </div>
-              <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step2')}</h3>
-              <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step2Title')}</h4>
-              <p className="ml-4 text-gray-700 text-sm">
-                {t('step2Desc')}
-              </p>
-            </div>
 
-            {/* Step 3 */}
-            <div className="relative">
-              <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
-                <Image src="/icons/steering-wheel.svg" width={24} height={24} alt="icon" />
-              </div>
-              <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step3')}</h3>
-              <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step3Title')}</h4>
-              <p className="ml-4 text-gray-700 text-sm">
-                {t('step3Desc')}
-              </p>
-            </div>
+              {/* Timeline Steps */}
+              <div className="relative pl-8 space-y-8 mt-8">
+                {/* Vertical dashed line */}
+                <div className="absolute left-2 top-6 bottom-6 w-px border-l-2 border-dashed border-gray-300"></div>
 
-            {/* Step 4 */}
-            <div className="relative">
-              <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
-                <Image src="/icons/gas-station.svg" width={24} height={24} alt="icon" />
+                {/* Step 1 */}
+                <div className="relative">
+                  <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
+                    <Image src="/icons/license.svg" width={24} height={24} alt="icon" />
+                  </div>
+                  <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step1')}</h3>
+                  <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step1Title')}</h4>
+                  <p className="ml-4 text-gray-700 text-sm">
+                    {t('step1Desc')}
+                  </p>
+                </div>
+
+                {/* Step 2 */}
+                <div className="relative">
+                  <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
+                    <Image src="/icons/circle-key.svg" width={24} height={24} alt="icon" />
+                  </div>
+                  <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step2')}</h3>
+                  <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step2Title')}</h4>
+                  <p className="ml-4 text-gray-700 text-sm">
+                    {t('step2Desc')}
+                  </p>
+                </div>
+
+                {/* Step 3 */}
+                <div className="relative">
+                  <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
+                    <Image src="/icons/steering-wheel.svg" width={24} height={24} alt="icon" />
+                  </div>
+                  <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step3')}</h3>
+                  <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step3Title')}</h4>
+                  <p className="ml-4 text-gray-700 text-sm">
+                    {t('step3Desc')}
+                  </p>
+                </div>
+
+                {/* Step 4 */}
+                <div className="relative">
+                  <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
+                    <Image src="/icons/gas-station.svg" width={24} height={24} alt="icon" />
+                  </div>
+                  <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step4')}</h3>
+                  <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step4Title')}</h4>
+                  <p className="ml-4 text-gray-700 text-sm">
+                    {t('step4Desc')}
+                  </p>
+                </div>
+                
+                {/* Step 5 */}
+                <div className="relative">
+                  <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
+                    <Image src="/icons/car.svg" width={24} height={24} alt="icon" />
+                  </div>
+                  <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step5')}</h3>
+                  <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step5Title')}</h4>
+                  <p className="ml-4 text-gray-700 text-sm">
+                    {t('step5Desc')}
+                  </p>
+                </div>
               </div>
-              <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step4')}</h3>
-              <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step4Title')}</h4>
-              <p className="ml-4 text-gray-700 text-sm">
-                {t('step4Desc')}
-              </p>
-            </div>
-            
-            {/* Step 5 */}
-            <div className="relative">
-              <div className="absolute -left-12 bg-white border-2 border-black rounded-full w-12 h-12 flex justify-center items-center z-10">
-                <Image src="/icons/car.svg" width={24} height={24} alt="icon" />
-              </div>
-              <h3 className="ml-4 text-blue-700 font-bold text-sm tracking-widest mb-0.5">{t('step5')}</h3>
-              <h4 className="ml-4 text-xl font-bold text-black border-b border-gray-300 pb-1 mb-2 inline-block w-full">{t('step5Title')}</h4>
-              <p className="ml-4 text-gray-700 text-sm">
-                {t('step5Desc')}
-              </p>
             </div>
           </div>
         </div>
