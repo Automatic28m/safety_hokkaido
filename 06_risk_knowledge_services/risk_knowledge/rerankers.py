@@ -97,6 +97,15 @@ class Reranker:
                 item.rank = rank
                 item.retrieval_method = "hybrid+rerank"
                 results.append(item)
+            elif isinstance(item, EvidenceChunk):
+                results.append(
+                    RetrievalResultItem(
+                        chunk=item,
+                        rank=rank,
+                        score=score_val,
+                        retrieval_method="hybrid+rerank",
+                    )
+                )
             elif isinstance(item, dict):
                 enriched = dict(item)
                 enriched["score"] = score_val

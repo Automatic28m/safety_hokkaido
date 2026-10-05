@@ -44,13 +44,44 @@
 * **Route Evaluation (`RouteInfo`):**
   * คัดกรองและแนะนำเส้นทางปลอดภัย (`recommended_route`), เส้นทางเลี่ยงสำรอง (`alternative_routes`), และบันทึกจุดที่ถูกระงับ/ปิดกั้น (`closed_segments`)
 
-### 1.6 สร้างชุดทดสอบอัตโนมัติครอบคลุม 100% (`tests/`)
-* สร้างและขยายไฟล์ทดสอบ 4 ชุด:
-  * `test_models.py` (8 Test Cases)
-  * `test_hybrid_retriever.py` (4 Test Cases)
-  * `test_rerankers.py` (3 Test Cases)
-  * `test_risk_model.py` (8 Test Cases)
-* **ผลการทดสอบ: ผ่านครบ 23 จาก 23 Test Cases (100% Pass)**
+### 1.7 สร้าง Unified Service Facade และ In-Memory Caching (`risk_service.py`)
+* **Single Entrypoint Architecture:**
+  * รวม `HybridRetriever`, `Reranker`, และ `LocalRiskModel` เข้าด้วยกันเป็น Facade คลาสเดียว `RiskKnowledgeService`
+  * เมธอด `get_risk_knowledge(...)`: ประมวลผลทั้งการสืบค้นเอกสาร RAG และการวิเคราะห์ความเสี่ยง พร้อมส่งกลับเป็นโมเดล `RiskKnowledgeResponse` ที่สมบูรณ์ในคำสั่งเดียว
+  * เมธอด `retrieve_evidence(...)`: ค้นหาเฉพาะเอกสารความปลอดภัยสำหรับคำถามทั่วไป
+  * เมธอด `assess_risk(...)`: ประเมินเฉพาะความเสี่ยงเส้นทางแบบเรียลไทม์
+  * การรวมข้อความแจ้งเตือน (`notices`) และการตั้งค่าสถานะ `degraded: true` อย่างเป็นระบบ
+
+### 1.8 การทำนายแนวโน้มความเสี่ยงล่วงหน้า (Temporal Hazard Trend Forecasting)
+* เพิ่ม Enum `RiskTrend` (`STABLE`, `DETERIORATING`, `IMPROVING`) ใน `models.py`
+* พัฒนาเมธอด `evaluate_forecast_trend()` ใน `risk_model.py` ตรวจจับแนวโน้มพยากรณ์อากาศล่วงหน้า 12-24 ชั่วโมง:
+  * คาดการณ์จุดเสี่ยงสูงสุด (`forecasted_peak_score`) และกรอบเวลาวิกฤต (`forecasted_peak_window`)
+  * หากพยากรณ์พบว่าความเร็วลมหรือหิมะจะทวีความรุนแรงขึ้น $\ge 0.20$ หรือแตะระดับวิกฤต $\ge 0.70$ ระบบจะแจ้งเตือน `RiskTrend.DETERIORATING` ทันที เพื่อให้นักท่องเที่ยวเตรียมพร้อมก่อนเกิดเหตุ
+
+### 1.9 การประเมินความเสี่ยงเชิงภูมิศาสตร์และช่องเขา (Geo-Spatial & Corridor Hazard Multipliers)
+* พัฒนาเมธอด `evaluate_corridor_risk()` ใน `risk_model.py`
+* ตรวจจับเส้นทางสัญจรที่ตัดผ่านช่องเขาสูงชันและเสี่ยงอันตรายในฮอกไกโด:
+  * ช่องเขา Nakayama Pass (Route 230), Nissho Pass (Route 274), Mikuni Pass (Route 273), Sekihoku Pass (Route 39), Karikachi Pass (Route 38)
+  * ชายฝั่งลมกรรโชกแรงเสี่ยงไวท์เอาต์ (Otaru-Yoichi coastal strip, Rumoi, Soya/Wakkanai)
+* บังคับใช้ Elevation / Coastal Hazard Multipliers (ตัวคูณความเสี่ยง $\times 1.25$ ถึง $\times 1.35$) เมื่อสภาพอากาศเข้าข่ายอันตราย
+
+### 1.10 การจัดลำดับความสำคัญของเอกสารฉุกเฉินแบบปรับตัว (Adaptive Emergency Retrieval)
+* ระบบตรวจสอบ intent ของคำค้นหาฉุกเฉิน (เช่น ติดในรถ, หิมะถล่ม, ไวท์เอาต์, SOS, โทร 119/110, อุณหภูมิต่ำวิกฤต) หรือสภาวะที่มี `RiskLevel.HIGH`
+* สลับนำ chunk เอกสารหมวดกู้ภัยและเอาชีวิตรอด (`emergency`, `whiteout`, `firstaid`, `survival`) ขึ้นสู่อันดับ 1 โดยอัตโนมัติ เหนือเอกสารท่องเที่ยวทั่วไป
+
+### 1.11 แคชความเร็วสูงในหน่วยความจำ (Sub-10ms High-Performance In-Memory Cache)
+* ทำ Hashing กุญแจแคชด้วย SHA-256 จาก `query`, `top_k`, และ Live Snapshots (Weather, Disaster, Transit, Route Context)
+* กำหนดค่า TTL หมดอายุอัตโนมัติ (Default 90 วินาที)
+* มอบความเร็วในการตอบสนองคำสั่งซ้ำต่ำกว่า 10 มิลลิวินาที (<10ms) พร้อมฟังก์ชัน `get_cache_stats()` และ `clear_cache()`
+
+### 1.12 ชุดทดสอบจำลองวิกฤตประวัติศาสตร์ฮอกไกโด (Hokkaido Landmark Crisis Benchmark Suite)
+* สร้าง `tests/test_crisis_benchmarks.py` จำลองเหตุการณ์จริงระดับประวัติศาสตร์:
+  1. **2022 Sapporo Whiteout Blizzard:** ลมกระโชกแรง $25.8\text{ m/s}$ หิมะท่วมขัง รถไฟสายหลักหยุดให้บริการ
+  2. **2018 Eastern Iburi Mega-Earthquake:** แผ่นดินไหวรุนแรง Shindo 7, ขนาด 6.7, ไฟฟ้าดับทั่วเกาะ (Blackout)
+  3. **Nakayama Mountain Pass Multiplier:** ทดสอบตัวคูณความเสี่ยงช่องเขาหิมะหนา
+  4. **Hourly Forecast Deteriorating Trajectory:** ทดสอบการตรวจจับพายุล่วงหน้า
+  5. **Performance Cache Hit & Latency:** ทดสอบแคชตอบกลับไวกว่า 10ms
+  6. **Adaptive Emergency Prioritization:** ทดสอบการดันเอกสาร 119/เอาชีวิตรอดขึ้นอันดับแรก
 
 ---
 
@@ -63,13 +94,16 @@
 | **3. บั๊ก Dictionary Subscript** | โค้ดภายนอก (Node 03/07) เรียก `c['text']` และ `c['metadata']` ซึ่ง Pydantic ปกติไม่รองรับ | เพิ่มเมธอด `__getitem__`, `__contains__`, และ `get()` ใน Model ให้ทำหน้าที่เป็น Transparent Proxy |
 | **4. ผลการจัดอันดับไม่มี Score** | โค้ดเดิมตัด score ทิ้งหลังจาก sort เหลือแค่ chunk ดิบ | คงค่า `score` และ `rank` ไว้ใน `RetrievalResultItem` เพื่อใช้วิเคราะห์และตรวจสอบย้อนหลัง |
 | **5. Cross-module Dependency ในการทดสอบ** | การทดสอบกับโมเดล `LiveDataSnapshot` ของโมดูล 04 เรียกหา `config` และ `requests` | จัดการโครงสร้าง `sys.path` ให้รองรับทั้งการรันเดี่ยวและการรันแบบ Cross-Module อย่างสมบูรณ์ |
+| **6. ความซ้ำซ้อนในการเรียกใช้โมดูล 06** | โมดูลภายนอก (03/07) ต้องประกอบ Retriever, Reranker และ RiskModel แยกกัน | สร้าง `RiskKnowledgeService` เป็น Facade จุดเดียว ลดความซ้ำซ้อนและรับประกัน Response Schema |
+| **7. ข้อจำกัดคะแนนวิกฤตในแผ่นดินไหวขนาดใหญ่** | แผ่นดินไหว Shindo 7 เมื่อรวมถ่วงน้ำหนักกับวันที่อากาศแจ่มใส คะแนนถูกเกลี่ยเหลือ 0.75 | ปรับปรุง Fail-Safe Override: หาก $S_{\text{disaster}} \ge 0.90$ บังคับคะแนน $\ge 0.90$ ทันที |
+| **8. Re-ranker Output Type Inconsistency** | เมื่อ Cross-Encoder จัดอันดับคืนค่า EvidenceChunk ดิบ ทำให้ขาด rank/score item wrapper | Wrap `EvidenceChunk` เป็น `RetrievalResultItem` เสมอใน `rerankers.py` |
 
 ---
 
 ## 📊 3. ผลการทดสอบอัตโนมัติ (Automated Test Results)
 
 ```bash
-Ran 23 tests in 41.688s
+Ran 34 tests in 62.418s
 
 OK
 ```
@@ -77,5 +111,7 @@ OK
 * `test_hybrid_retriever.py` (4 Tests) — ผ่าน 100%
 * `test_rerankers.py` (3 Tests) — ผ่าน 100%
 * `test_risk_model.py` (8 Tests) — ผ่าน 100%
+* `test_risk_service.py` (5 Tests) — ผ่าน 100%
+* `test_crisis_benchmarks.py` (6 Tests) — ผ่าน 100%
 
-**รวมทั้งสิ้น 23 จาก 23 Tests ผ่านเรียบร้อยสมบูรณ์ (100% Pass Rate)**
+**รวมทั้งสิ้น 34 จาก 34 Tests ผ่านเรียบร้อยสมบูรณ์ (100% Pass Rate)**
