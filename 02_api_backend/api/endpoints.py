@@ -26,18 +26,19 @@ SAFE_ERROR_REPLY = (
 )
 
 def _send_audit_background(payload: dict) -> None:
-    # audit_url = os.environ.get("NODE08_AUDIT_URL", "http://127.0.0.1:8008/audit")
-    # audit_token = os.environ.get("NODE08_AUDIT_TOKEN", "")
-    # try:
-    #     requests.post(
-    #         audit_url,
-    #         json=payload,
-    #         headers={"X-Node08-Token": audit_token},
-    #         timeout=2.0
-    #     )
-    # except Exception as e:
-    #     logger.warning("Failed to send audit log to module 08: %s", str(e))
-    pass
+    audit_url = os.environ.get("NODE08_AUDIT_URL", "http://127.0.0.1:8008/audit")
+    audit_token = os.environ.get("NODE08_AUDIT_TOKEN", "")
+    try:
+        res = requests.post(
+            audit_url,
+            json=payload,
+            headers={"X-Node08-Token": audit_token},
+            timeout=2.0
+        )
+        if res.status_code >= 400:
+            logger.warning(f"Audit rejected: {res.text}")
+    except Exception as e:
+        logger.warning("Failed to send audit log to module 08: %s", str(e))
 
 def _request_id(request: Request) -> str:
     return getattr(request.state, "request_id", None) or "unknown"
@@ -190,12 +191,21 @@ def create_router(
             live_sources=live_sources,
         )
 
+        def extract_chunk_id(e):
+            if not isinstance(e, dict):
+                return str(e)[:255]
+            if "chunk_id" in e:
+                return e["chunk_id"]
+            if "chunk" in e and isinstance(e["chunk"], dict) and "chunk_id" in e["chunk"]:
+                return e["chunk"]["chunk_id"]
+            return str(e)[:255]
+
         audit_payload = {
             "request_id": request_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "route": "rag",
             "degraded": degraded,
-            "evidence_ids": [e.get("chunk_id", str(e)) for e in evidence] if evidence else [],
+            "evidence_ids": [extract_chunk_id(e) for e in evidence] if evidence else [],
             "source_versions": ["corpus-2026-09-24"],
             "evaluation_schema_version": "1"
         }
@@ -212,18 +222,17 @@ def create_router(
 
     @router.post("/feedback")
     def feedback_endpoint(payload: FeedbackRequest):
-        # feedback_url = os.environ.get("NODE08_FEEDBACK_URL", "http://127.0.0.1:8008/feedback")
-        # target_payload = {
-        #     "request_id": payload.message_id,  # map frontend message_id to backend request_id
-        #     "rating": payload.rating
-        # }
-        # try:
-        #     res = requests.post(feedback_url, json=target_payload, timeout=2.0)
-        #     res.raise_for_status()
-        #     return {"status": "ok"}
-        # except requests.RequestException as e:
-        #     logger.warning("Failed to send feedback to module 08: %s", str(e))
-        #     raise HTTPException(status_code=503, detail="feedback_unavailable")
-        return {"status": "ok"}
+        feedback_url = os.environ.get("NODE08_FEEDBACK_URL", "http://127.0.0.1:8008/feedback")
+        target_payload = {
+            "request_id": payload.message_id,  # map frontend message_id to backend request_id
+            "rating": payload.rating
+        }
+        try:
+            res = requests.post(feedback_url, json=target_payload, timeout=2.0)
+            res.raise_for_status()
+            return {"status": "ok"}
+        except requests.RequestException as e:
+            logger.warning("Failed to send feedback to module 08: %s", str(e))
+            raise HTTPException(status_code=503, detail="feedback_unavailable")
 
     return router
