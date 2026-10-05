@@ -1,0 +1,40 @@
+--- 01_web_app ---
+  14 Phanlop Boonleua
+   5 Aran
+   2 Saran Thanyawikai
+   2 rdyAran
+   2 Phanlop Boonluea
+
+--- 02_api_backend ---
+   4 Phanlop Boonleua
+   3 Phanlop Boonluea
+   2 Saran Thanyawikai
+   2 fffalafair
+   1 DevnameJay
+
+--- 03_travel_ai_agent ---
+  11 Phanlop Boonleua
+   2 Saran Thanyawikai
+   1 Nuthaluek kokotsomrong
+
+--- 04_external_data_services ---
+  10 Saran Thanyawikai
+   4 Phanlop Boonleua
+
+--- 05_data_integration ---
+   2 Saran Thanyawikai
+   2 DevnameJay
+
+--- 06_risk_knowledge_services ---
+   2 Saran Thanyawikai
+   2 cheewakornartdeelang
+
+--- 07_decision_llm_engine ---
+   4 Phanlop Boonleua
+   2 Saran Thanyawikai
+
+--- 08_recommendation_feedback ---
+   2 Saran Thanyawikai
+   2 Marisa Pimpralab
+   1 Phanlop Boonleua
+
