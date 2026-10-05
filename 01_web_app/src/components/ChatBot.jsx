@@ -205,17 +205,7 @@ export default function ChatBot({ isOpen, onClose }) {
           </button>
         </div>
 
-        <div className="shrink-0 flex flex-wrap gap-x-4 gap-y-1 px-6 py-2 bg-white border-b border-gray-200 text-xs text-gray-600" aria-label={t('servicesTitle')}>
-          {SERVICES.map((k) => {
-            const st = serviceStatus?.[k];
-            return (
-              <span key={k} className="flex items-center gap-1.5">
-                <i className={`inline-block w-2.5 h-2.5 rounded-full ${DOT_STYLE[st] || 'bg-gray-300'}`} />
-                {t(`services.${k}`)}
-              </span>
-            );
-          })}
-        </div>
+
 
         <div className={`flex flex-1 overflow-hidden ${currentRouteIntent ? 'flex-row' : 'flex-col'}`}>
           <div className={`flex flex-col transition-all duration-300 ease-in-out ${currentRouteIntent ? (isMapCollapsed ? 'flex-1 border-r border-gray-200' : 'w-1/2 border-r border-gray-200') : 'w-full'} h-full`}>
