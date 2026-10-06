@@ -65,6 +65,7 @@ class RAGPipeline:
         route = route_result["route"]   # "general" | "rag" | "realtime" | "rag+realtime"
         route_intent = route_result.get("route_intent")
         ui_widget = route_result.get("ui_widget")
+        target_city = route_result.get("target_city") or "Sapporo"
 
         # ── DL05 QUERY REFORMULATION: make standalone if needed ─────────────
         if config.USE_MEMORY and chat_history:
@@ -117,7 +118,7 @@ class RAGPipeline:
         # ── LIVE DATA: node 03 runs the node 04 tools itself ────────────────
         live_data_list = []
         if active_agents.get("weather"):
-            live_data_list.append(get_real_time_weather("Sapporo"))
+            live_data_list.append(get_real_time_weather(target_city))
         if active_agents.get("disaster"):
             live_data_list.append(get_disaster_warnings())
         if active_agents.get("train"):
@@ -206,89 +207,30 @@ class RAGPipeline:
 
     def _call_groq(self, messages: list) -> tuple[str, str]:
         used_model = config.LLM_MODEL
-        response = None
-
-        if config.GROQ_API_KEY:
-            payload = {
-                "model": used_model,
-                "messages": messages,
-                "max_tokens": 800,
-            }
-            headers = {
-                "Authorization": f"Bearer {config.GROQ_API_KEY}",
-                "Content-Type": "application/json",
-            }
-            try:
-                response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=12)
-                # Fallback mechanism if the primary model hits a rate limit
-                if response.status_code == 429:
-                    fallback_model = "qwen/qwen3.8-27b"
-                    print(f"[Fallback] Rate limit reached for {config.LLM_MODEL}. Switching to alternative model: {fallback_model}...")
-                    payload["model"] = fallback_model
-                    used_model = fallback_model
-                    response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=12)
-            except Exception as e:
-                print(f"[Groq Exception] {e}")
-                response = None
-
-        # Fallback to Google Gemini if Groq failed, rate-limited, context-exceeded, or no GROQ_API_KEY
-        needs_gemini = (
-            response is None
-            or response.status_code in [400, 413, 429, 500, 502, 503]
-            or "context" in getattr(response, "text", "").lower()
-            or "limit" in getattr(response, "text", "").lower()
-        )
-
-        gemini_api_key = getattr(config, "GEMINI_API_KEY", "")
-        if needs_gemini and gemini_api_key:
-            gemini_model = getattr(config, "GEMINI_MODEL", "gemini-3.5-flash")
-            print(f"[Fallback] Activating Google Gemini ({gemini_model}) as backup...")
-            try:
-                gemini_headers = {
-                    "Authorization": f"Bearer {gemini_api_key}",
-                    "Content-Type": "application/json",
-                }
-                gemini_payload = {
-                    "model": gemini_model,
-                    "messages": messages,
-                    "max_tokens": 4096,
-                    "response_format": {"type": "json_object"}
-                }
-                gemini_res = requests.post(
-                    "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-                    headers=gemini_headers,
-                    json=gemini_payload,
-                    timeout=25
-                )
-                if gemini_res.status_code == 200:
-                    content = gemini_res.json()["choices"][0]["message"]["content"]
-                    return content, gemini_model
-                elif gemini_res.status_code in [503, 429]:
-                    lite_model = "gemini-3.1-flash-lite"
-                    print(f"[Fallback] Gemini {gemini_model} busy ({gemini_res.status_code}). Switching to {lite_model}...")
-                    gemini_payload["model"] = lite_model
-                    lite_res = requests.post(
-                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-                        headers=gemini_headers,
-                        json=gemini_payload,
-                        timeout=25
-                    )
-                    if lite_res.status_code == 200:
-                        content = lite_res.json()["choices"][0]["message"]["content"]
-                        return content, lite_model
-                    else:
-                        print(f"[Gemini Fallback Error] {lite_res.status_code}: {lite_res.text}")
-                else:
-                    print(f"[Gemini Fallback Error] {gemini_res.status_code}: {gemini_res.text}")
-            except Exception as e:
-                print(f"[Gemini Fallback Exception] {e}")
-
-        if response is None:
-            return "ขออภัยค่ะ เกิดข้อผิดพลาดในการเชื่อมต่อกับระบบ AI กรุณาลองใหม่อีกครั้ง", used_model
-
+        payload = {
+            "model": used_model,
+            "messages": messages,
+            "max_tokens": 800,
+        }
+        headers = {
+            "Authorization": f"Bearer {config.GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        
+        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+        
+        # Fallback mechanism if the primary model hits a rate limit
+        if response.status_code == 429:
+            fallback_model = "qwen/qwen3.8-27b"
+            print(f"[Fallback] Rate limit reached for {config.LLM_MODEL}. Switching to alternative model: {fallback_model}...")
+            payload["model"] = fallback_model
+            used_model = fallback_model
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+            
         if response.status_code != 200:
             error_msg = f"LLM API Error {response.status_code}: {response.text}"
             print(f"[ERROR] {error_msg}")
+            # If the context is too large, Groq often returns 400 or 413
             if "context" in response.text.lower() or "limit" in response.text.lower() or response.status_code in [400, 413, 429]:
                 return "ขออภัยค่ะ ข้อมูลที่ดึงมามีขนาดใหญ่เกินกว่าที่ระบบจะประมวลผลได้ (Context Window Exceeded) กรุณาจำกัดคำถามให้เจาะจงขึ้น", used_model
             return f"ขออภัยค่ะ เกิดข้อผิดพลาดจาก LLM API: {response.text}", used_model

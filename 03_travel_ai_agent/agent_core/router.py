@@ -30,6 +30,7 @@ Format:
   "route": "<route>", 
   "confidence": <0.0-1.0>, 
   "reasoning": "<brief reason>",
+  "target_city": "<City name in English if mentioned (e.g. Sapporo, Hakodate, Niseko), else null>",
   "route_intent": {
     "origin": "<start in English>",
     "destination": "<end in English>",
@@ -48,13 +49,13 @@ Example payload for weather: {"location": "Sapporo"}
 Example payload for flights: {"airport": "CTS", "direction": "arrival"})
 
 Example 1 (No directions or widgets):
-{ "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps.", "route_intent": null, "ui_widget": null }
+{ "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps.", "target_city": null, "route_intent": null, "ui_widget": null }
 
 Example 2 (Asking for directions):
-{ "route": "general", "confidence": 0.99, "reasoning": "User asking how to travel between two cities.", "route_intent": { "origin": "Chitose Airport", "destination": "Sapporo", "mode": "train" }, "ui_widget": null }
+{ "route": "general", "confidence": 0.99, "reasoning": "User asking how to travel between two cities.", "target_city": "Sapporo", "route_intent": { "origin": "Chitose Airport", "destination": "Sapporo", "mode": "train" }, "ui_widget": null }
 
 Example 3 (Asking for detailed weather forecast):
-{ "route": "realtime", "confidence": 0.99, "reasoning": "User explicitly asked for the hourly weather forecast.", "route_intent": null, "ui_widget": { "widget_type": "weather_forecast", "payload": { "location": "Niseko" } } }
+{ "route": "realtime", "confidence": 0.99, "reasoning": "User explicitly asked for the hourly weather forecast.", "target_city": "Niseko", "route_intent": null, "ui_widget": { "widget_type": "weather_forecast", "payload": { "location": "Niseko" } } }
 """
 
 # ---------------------------------------------------------------------------
@@ -111,53 +112,28 @@ class Router:
         messages.append({"role": "user", "content": query})
 
         try:
-            raw = None
-            if self.api_key:
-                try:
-                    response = requests.post(
-                        self.api_url,
-                        headers={
-                            "Authorization": f"Bearer {self.api_key}",
-                            "Content-Type": "application/json"
-                        },
-                        json={
-                            "model": self.router_model,
-                            "messages": messages,
-                            "temperature": 0.0,
-                            "max_tokens": 512,
-                        },
-                        timeout=10
-                    )
-                    if response.status_code == 200:
-                        raw = response.json()
-                except Exception as e:
-                    print(f"[Router Groq Error] {e}")
+            response = requests.post(
+                self.api_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": self.router_model,
+                    "messages": messages,
+                    "temperature": 0.0,
+                    "max_tokens": 512,
+                    # NOTE: response_format json_object is NOT supported by all models
+                    # We parse JSON manually from the raw text instead
+                },
+                timeout=10
+            )
 
-            # Fallback to Gemini if Groq failed or not configured
-            if (not raw or "choices" not in raw) and getattr(config, "GEMINI_API_KEY", ""):
-                try:
-                    gemini_res = requests.post(
-                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-                        headers={
-                            "Authorization": f"Bearer {config.GEMINI_API_KEY}",
-                            "Content-Type": "application/json"
-                        },
-                        json={
-                            "model": getattr(config, "GEMINI_MODEL", "gemini-3.5-flash"),
-                            "messages": messages,
-                            "temperature": 0.0,
-                            "max_tokens": 512,
-                            "response_format": {"type": "json_object"}
-                        },
-                        timeout=10
-                    )
-                    if gemini_res.status_code == 200:
-                        raw = gemini_res.json()
-                except Exception as eg:
-                    print(f"[Router Gemini Error] {eg}")
+            raw = response.json()
 
-            if not raw or "choices" not in raw:
-                raise ValueError("Both Groq and Gemini router API failed")
+            # Bug fix: guard against API errors that return no 'choices'
+            if "choices" not in raw:
+                raise ValueError(f"Groq router API error: {raw.get('error', raw)}")
 
             content = raw["choices"][0]["message"]["content"]
 
@@ -192,6 +168,7 @@ class Router:
             # Ensure optional fields are explicitly in the result
             result["route_intent"] = result.get("route_intent", None)
             result["ui_widget"] = result.get("ui_widget", None)
+            result["target_city"] = result.get("target_city", None)
 
             print(
                 f"[Router] Route='{result['route']}' | "
@@ -210,7 +187,8 @@ class Router:
                     "confidence": 0.5,
                     "reasoning": "Router error — rescued by keyword fallback.",
                     "route_intent": None,
-                    "ui_widget": None
+                    "ui_widget": None,
+                    "target_city": None
                 }
             
             print("[Router] Defaulting to 'rag'.")
@@ -219,7 +197,8 @@ class Router:
                 "confidence": 0.5,
                 "reasoning": "Router error — safe default to RAG.",
                 "route_intent": None,
-                "ui_widget": None
+                "ui_widget": None,
+                "target_city": None
             }
 
     def _keyword_fallback(self, query: str) -> Optional[str]:
