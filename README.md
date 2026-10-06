@@ -70,3 +70,15 @@ safety_hokkaido/
 | **08** | **Recommendation Feedback** | ระบบ Logging และ Audit | มาริสา พิมพระลับ | มาริสา พิมพระลับ (100%) |
 
 ---
+
+
+# ผู้จัดทำและ GitHub Links (Team Members)
+
+- **พัลลภ บุญเหลือ** - [Automatic28m](https://github.com/Automatic28m)
+- **มาริสา พิมพระลับ** - [marisa46054](https://github.com/marisa46054)
+- **นายอรัญ โต๊ะสู** - [rdyAran](https://github.com/rdyAran)
+- **นายชลากร ศรีบุญเรือง** - [fffalafair](https://github.com/fffalafair)
+- **Nuthaluek kokotsomrong** - [Onpreyaq5](https://github.com/Onpreyaq5)
+- **ศรัญ ธัญญวิกัย** - [hoh251](https://github.com/hoh251)
+- **วิศรุต ขำหล่อ** - [wissarut-29](https://github.com/wissarut-29)
+- **ชีวากร อาจดีลัง** - [cheewakornartdeelang](https://github.com/cheewakornartdeelang)
