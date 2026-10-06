@@ -99,6 +99,7 @@ class AskResponse(BaseModel):
     notices: List[str] = Field(default_factory=list)
     evidence: List[Dict[str, Any]] = Field(default_factory=list)
     live_sources: List[Dict[str, Any]] = Field(default_factory=list)
+    used_model: Optional[str] = None
 
 
 class ErrorResponse(AskResponse):

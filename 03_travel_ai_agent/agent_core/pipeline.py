@@ -160,7 +160,7 @@ class RAGPipeline:
 
         # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
         messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
-        json_string_from_groq = self._call_groq(messages)
+        json_string_from_groq, used_model = self._call_groq(messages)
         decision_dict = self.generator.parse_llm_response(json_string_from_groq)
 
         # ── RESULT: combine the decision with the chunks and live data for node 02 ──
@@ -172,6 +172,7 @@ class RAGPipeline:
             "degraded": decision_dict["degraded"],
             "notices": decision_dict["notices"],
             "route_intent": route_intent,
+            "used_model": used_model,
         }
 
     def ask(self, query: str, chat_history=None, enabled_agents=None):
@@ -181,9 +182,10 @@ class RAGPipeline:
             "enabled_agents": enabled_agents,
         })["reply"]
 
-    def _call_groq(self, messages: list) -> str:
+    def _call_groq(self, messages: list) -> tuple[str, str]:
+        used_model = config.LLM_MODEL
         payload = {
-            "model": config.LLM_MODEL,
+            "model": used_model,
             "messages": messages,
             "max_tokens": 800,
         }
@@ -199,6 +201,7 @@ class RAGPipeline:
             fallback_model = "qwen/qwen3.8-27b"
             print(f"[Fallback] Rate limit reached for {config.LLM_MODEL}. Switching to alternative model: {fallback_model}...")
             payload["model"] = fallback_model
+            used_model = fallback_model
             response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
             
         if response.status_code != 200:
@@ -206,10 +209,10 @@ class RAGPipeline:
             print(f"[ERROR] {error_msg}")
             # If the context is too large, Groq often returns 400 or 413
             if "context" in response.text.lower() or "limit" in response.text.lower() or response.status_code in [400, 413, 429]:
-                return "ขออภัยค่ะ ข้อมูลที่ดึงมามีขนาดใหญ่เกินกว่าที่ระบบจะประมวลผลได้ (Context Window Exceeded) กรุณาจำกัดคำถามให้เจาะจงขึ้น"
-            return f"ขออภัยค่ะ เกิดข้อผิดพลาดจาก LLM API: {response.text}"
+                return "ขออภัยค่ะ ข้อมูลที่ดึงมามีขนาดใหญ่เกินกว่าที่ระบบจะประมวลผลได้ (Context Window Exceeded) กรุณาจำกัดคำถามให้เจาะจงขึ้น", used_model
+            return f"ขออภัยค่ะ เกิดข้อผิดพลาดจาก LLM API: {response.text}", used_model
             
         try:
-            return response.json()["choices"][0]["message"]["content"]
+            return response.json()["choices"][0]["message"]["content"], used_model
         except KeyError:
-            return f"ขออภัยค่ะ รูปแบบข้อมูลที่ตอบกลับจาก LLM ไม่ถูกต้อง: {response.text}"
+            return f"ขออภัยค่ะ รูปแบบข้อมูลที่ตอบกลับจาก LLM ไม่ถูกต้อง: {response.text}", used_model

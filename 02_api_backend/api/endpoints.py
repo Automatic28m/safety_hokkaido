@@ -189,6 +189,7 @@ def create_router(
             notices=notices,
             evidence=evidence,
             live_sources=live_sources,
+            used_model=raw.get("used_model") if hasattr(pipeline, "ask_structured") else None,
         )
 
         def extract_chunk_id(e):

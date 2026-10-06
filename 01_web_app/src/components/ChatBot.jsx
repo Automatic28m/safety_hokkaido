@@ -32,6 +32,7 @@ export default function ChatBot({ isOpen, onClose }) {
     { role: 'ai', content: t('greeting'), timestamp: now() }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [usedModel, setUsedModel] = useState('gpt-oss-120b');
   const [serviceStatus, setServiceStatus] = useState(null);
   const { conversationId, form, applyBackendTrip } = useTrip();
   const pathname = usePathname();
@@ -107,6 +108,7 @@ export default function ChatBot({ isOpen, onClose }) {
 
       const data = await res.json();
       if (data.service_status) setServiceStatus(data.service_status);
+      if (data.used_model) setUsedModel(data.used_model);
       
       // Handle Route Intent Split View
       if (data.route_intent) {
@@ -196,7 +198,7 @@ export default function ChatBot({ isOpen, onClose }) {
               <h2 className="text-white font-bold text-2xl tracking-wide leading-tight">Tamago</h2>
               <p className="text-white text-sm opacity-90 mt-0.5">
                 {t('ready')} <br />
-                <span className="text-xs opacity-75">Using AI model: gpt-oss-120b</span>
+                <span className="text-xs opacity-75">Using AI model: {usedModel}</span>
               </p>
             </div>
           </div>
