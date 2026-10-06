@@ -140,6 +140,16 @@ def create_router(
                         logger.warning("request_id=%s dropping malformed 'route_intent'", request_id)
                         route_intent = None
 
+                raw_ui_widget = raw.get("ui_widget")
+                ui_widget = None
+                if raw_ui_widget is not None:
+                    try:
+                        from .schemas import UIWidget
+                        ui_widget = UIWidget.model_validate(raw_ui_widget, strict=False)
+                    except ValidationError:
+                        logger.warning("request_id=%s dropping malformed 'ui_widget'", request_id)
+                        ui_widget = None
+
                 degraded = bool(raw.get("degraded", False))
                 notices = raw.get("notices") or []
 
@@ -185,6 +195,7 @@ def create_router(
             request_id=request_id,
             status=status,
             route_intent=route_intent,
+            ui_widget=ui_widget,
             degraded=degraded,
             notices=notices,
             evidence=evidence,
