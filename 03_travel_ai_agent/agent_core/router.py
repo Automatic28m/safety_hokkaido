@@ -34,15 +34,27 @@ Format:
     "origin": "<start in English>",
     "destination": "<end in English>",
     "mode": "<train|bus|car>"
-  } 
+  },
+  "ui_widget": {
+    "widget_type": "<weather_forecast|flight_board>",
+    "payload": { "<key>": "<value>" }
+  }
 }
-(Note: If the user mentions travel from A to B, you MUST extract it and translate origin/destination to ENGLISH to ensure maps work correctly. Example: "โอตารุ" -> "Otaru". If no travel is mentioned, route_intent MUST be null.)
 
-Example 1 (No directions):
-{ "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps.", "route_intent": null }
+(Note for route_intent: If the user mentions travel from A to B, extract it and translate to ENGLISH. If no travel is mentioned, route_intent MUST be null.)
 
-Example 2 (Asking for route/directions):
-{ "route": "general", "confidence": 0.99, "reasoning": "User asking how to travel between two cities.", "route_intent": { "origin": "Chitose Airport", "destination": "Sapporo", "mode": "train" } }
+(Note for ui_widget: ONLY output this if the user requests extensive data like 'hourly forecast', 'all arriving flights', or 'flight board'. Do not trigger for simple questions like 'is it cold?' or 'is my flight delayed?'. Set to null if not needed.
+Example payload for weather: {"location": "Sapporo"}
+Example payload for flights: {"airport": "CTS", "direction": "arrival"})
+
+Example 1 (No directions or widgets):
+{ "route": "rag", "confidence": 0.97, "reasoning": "User asked about earthquake evacuation steps.", "route_intent": null, "ui_widget": null }
+
+Example 2 (Asking for directions):
+{ "route": "general", "confidence": 0.99, "reasoning": "User asking how to travel between two cities.", "route_intent": { "origin": "Chitose Airport", "destination": "Sapporo", "mode": "train" }, "ui_widget": null }
+
+Example 3 (Asking for detailed weather forecast):
+{ "route": "realtime", "confidence": 0.99, "reasoning": "User explicitly asked for the hourly weather forecast.", "route_intent": null, "ui_widget": { "widget_type": "weather_forecast", "payload": { "location": "Niseko" } } }
 """
 
 # ---------------------------------------------------------------------------
@@ -152,8 +164,9 @@ class Router:
                     result["route"] = fallback_route
                     result["reasoning"] = "[Keyword fallback] Overrode low-confidence LLM route."
 
-            # Ensure route_intent is explicitly in the result
+            # Ensure optional fields are explicitly in the result
             result["route_intent"] = result.get("route_intent", None)
+            result["ui_widget"] = result.get("ui_widget", None)
 
             print(
                 f"[Router] Route='{result['route']}' | "
@@ -171,7 +184,8 @@ class Router:
                     "route": fallback_route,
                     "confidence": 0.5,
                     "reasoning": "Router error — rescued by keyword fallback.",
-                    "route_intent": None
+                    "route_intent": None,
+                    "ui_widget": None
                 }
             
             print("[Router] Defaulting to 'rag'.")
@@ -179,7 +193,8 @@ class Router:
                 "route": "rag",
                 "confidence": 0.5,
                 "reasoning": "Router error — safe default to RAG.",
-                "route_intent": None
+                "route_intent": None,
+                "ui_widget": None
             }
 
     def _keyword_fallback(self, query: str) -> Optional[str]:

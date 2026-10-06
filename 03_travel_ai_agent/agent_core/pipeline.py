@@ -64,6 +64,7 @@ class RAGPipeline:
         route_result = self.router.classify(query, chat_history)
         route = route_result["route"]   # "general" | "rag" | "realtime" | "rag+realtime"
         route_intent = route_result.get("route_intent")
+        ui_widget = route_result.get("ui_widget")
 
         # ── DL05 QUERY REFORMULATION: make standalone if needed ─────────────
         if config.USE_MEMORY and chat_history:
@@ -158,6 +159,26 @@ class RAGPipeline:
             )
             live_data_list.append(ui_note)
 
+        if ui_widget:
+            w_type = ui_widget.get("widget_type")
+            if w_type == "weather_forecast":
+                ui_msg = "The System has ALREADY opened an interactive hourly weather forecast widget on the right panel. DO NOT list hourly data in your chat response. Briefly tell the user to look at the panel, and summarize the overall day's weather."
+            elif w_type == "flight_board":
+                ui_msg = "The System has ALREADY opened an interactive flight status board on the right panel. DO NOT list all flights in your chat response. Briefly tell the user to check the flight board on the right, and answer any specific flight questions they had."
+            else:
+                ui_msg = f"The System has opened a {w_type} widget on the right panel. Please inform the user."
+
+            widget_note = LiveDataSnapshot(
+                provider="SystemUI",
+                kind="ui_action",
+                scope={"region": "Local"},
+                status="ok",
+                fetched_at=datetime.utcnow().isoformat() + "Z",
+                expires_at=datetime.utcnow().isoformat() + "Z",
+                data={"summary": ui_msg}
+            )
+            live_data_list.append(widget_note)
+
         # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
         messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
         json_string_from_groq, used_model = self._call_groq(messages)
@@ -172,6 +193,7 @@ class RAGPipeline:
             "degraded": decision_dict["degraded"],
             "notices": decision_dict["notices"],
             "route_intent": route_intent,
+            "ui_widget": ui_widget,
             "used_model": used_model,
         }
 

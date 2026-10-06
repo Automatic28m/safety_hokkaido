@@ -15,9 +15,16 @@ const pad = (n) => String(n).padStart(2, '0');
 const EMPTY_FORM = { origin: '', destination: '', date: '', time: '', priority: 'safest', avoidMountain: false, originPos: null, destPos: null };
 
 export function TripProvider({ children }) {
-  const [conversationId, setConversationId] = useState(() => 
-    typeof window !== 'undefined' ? crypto.randomUUID() : null
-  );
+  const [conversationId, setConversationId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hk_conversation_id');
+      if (saved) return saved;
+      const newId = crypto.randomUUID();
+      localStorage.setItem('hk_conversation_id', newId);
+      return newId;
+    }
+    return null;
+  });
   
   const [form, setForm] = useState(() => {
     const d = new Date();
