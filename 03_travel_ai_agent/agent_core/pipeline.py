@@ -154,7 +154,7 @@ class RAGPipeline:
                 status="ok",
                 fetched_at=datetime.utcnow().isoformat() + "Z",
                 expires_at=datetime.utcnow().isoformat() + "Z",
-                data={"summary": f"DO NOT apologize for lack of info. The System has ALREADY opened an interactive map for the route from {origin_en} to {dest_en} by {mode_en} on the user's screen.{duration_msg} Your ONLY task is to briefly tell the user: 'I have opened the map and navigation for you on the right side of the screen, the estimated travel time is ...'"}
+                data={"summary": f"DO NOT apologize for lack of info. The System has ALREADY opened an interactive map for the route from {origin_en} to {dest_en} by {mode_en} on the user's screen.{duration_msg} Please inform the user: 'I have opened the map and navigation for you on the right side of the screen, the estimated travel time is ...'. IMPORTANT: After mentioning the map, you MUST also answer ALL other questions the user asked (such as weather, flight delays, etc.) using the provided live data."}
             )
             live_data_list.append(ui_note)
 
