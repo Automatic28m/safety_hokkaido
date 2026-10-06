@@ -91,8 +91,51 @@ class Generator:
         Parses the JSON returned by the LLM, validates the schema, and sanitizes HTML.
         """
         try:
+            # Strip markdown code blocks if present
+            raw = json_str.strip()
+            if raw.startswith("```json"):
+                raw = raw[7:]
+            elif raw.startswith("```"):
+                raw = raw[3:]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            raw = raw.strip()
+            
+            # Extract JSON object bounded by outermost braces
+            s_idx = raw.find('{')
+            e_idx = raw.rfind('}')
+            if s_idx != -1 and e_idx != -1:
+                raw = raw[s_idx:e_idx+1]
+
             # 1. Parse JSON
-            decision_dict = json.loads(json_str)
+            try:
+                decision_dict = json.loads(raw, strict=False)
+            except Exception:
+                reply_match = re.search(r'"reply"\s*:\s*"(.*?)(?:"\s*,\s*"[a-zA-Z_]+|\s*"\s*\}|\s*$)', raw, re.DOTALL)
+                if reply_match:
+                    extracted_reply = reply_match.group(1).replace('\\"', '"').replace('\\n', '\n')
+                    decision_dict = {"reply": extracted_reply}
+                else:
+                    raise
+
+            if not isinstance(decision_dict, dict):
+                decision_dict = {"reply": str(decision_dict)}
+                
+            # Ensure required schema fields exist with defaults
+            if "reply" not in decision_dict:
+                decision_dict["reply"] = str(decision_dict.get("message", decision_dict.get("answer", "")))
+            if "safety_level" not in decision_dict:
+                decision_dict["safety_level"] = "unknown"
+            if "used_evidence_ids" not in decision_dict or not isinstance(decision_dict["used_evidence_ids"], list):
+                decision_dict["used_evidence_ids"] = []
+            if "used_live_sources" not in decision_dict or not isinstance(decision_dict["used_live_sources"], list):
+                decision_dict["used_live_sources"] = []
+            if "degraded" not in decision_dict:
+                decision_dict["degraded"] = False
+            if "notices" not in decision_dict or not isinstance(decision_dict["notices"], list):
+                decision_dict["notices"] = []
+            if "route_intent" not in decision_dict:
+                decision_dict["route_intent"] = None
             
             # 2. Strict Schema Validation (fallback to manual if pydantic missing)
             if BaseModel is not object:
@@ -127,6 +170,7 @@ class Generator:
             }
             
         except Exception as e:
+            print(f"[Generator Parse Error] {e}")
             return self.get_fallback_response(f"Validation or parsing failed: {str(e)}")
 
     def get_fallback_response(self, reason: str) -> dict:

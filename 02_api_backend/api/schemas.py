@@ -90,15 +90,24 @@ class RouteIntent(BaseModel):
     mode: str
 
 
+class UIWidget(BaseModel):
+    """Generic intent for rich data visualization widgets in the frontend side panel."""
+    
+    widget_type: str  # "map" | "weather" | "flight"
+    payload: dict
+
+
 class AskResponse(BaseModel):
     reply: str
     request_id: str
     status: str = "ok"
     route_intent: Optional[RouteIntent] = None
+    ui_widget: Optional[UIWidget] = None
     degraded: bool = False
     notices: List[str] = Field(default_factory=list)
     evidence: List[Dict[str, Any]] = Field(default_factory=list)
     live_sources: List[Dict[str, Any]] = Field(default_factory=list)
+    used_model: Optional[str] = None
 
 
 class ErrorResponse(AskResponse):

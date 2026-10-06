@@ -42,6 +42,10 @@ class Config:
     METEOSOURCE_API_KEY = os.getenv("METEOSOURCE_API_KEY", "")
     # Switch model to bypass the rate limit on the previous model
     LLM_MODEL = "openai/gpt-oss-120b"
+
+    # --- Fallback LLM Settings (Google Gemini) ---
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
     
     # --- System Prompt ---
     SYSTEM_PROMPT = """You are Tamago, a friendly, warm, and helpful female AI guide for Hokkaido tourists. 

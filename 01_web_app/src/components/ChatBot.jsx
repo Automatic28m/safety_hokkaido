@@ -9,6 +9,7 @@ import remarkBreaks from 'remark-breaks';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTrip } from './TripContext';
+import RightPanel from './RightPanel';
 
 const LEVEL_STYLE = {
   SAFE: 'bg-green-700',
@@ -25,20 +26,66 @@ export default function ChatBot({ isOpen, onClose }) {
   const t = useTranslations('Chat');
   const locale = useLocale();
   const [input, setInput] = useState('');
-  const [currentRouteIntent, setCurrentRouteIntent] = useState(null);
-  const [isMapCollapsed, setIsMapCollapsed] = useState(false);
+  const [tabs, setTabs] = useState([]);
+  const [liveSources, setLiveSources] = useState([]);
+  const [activeTabId, setActiveTabId] = useState(null);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [mapIframeLoading, setMapIframeLoading] = useState(true);
   const [messages, setMessages] = useState(() => [
     { role: 'ai', content: t('greeting'), timestamp: now() }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [usedModel, setUsedModel] = useState('gpt-oss-120b');
   const [serviceStatus, setServiceStatus] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const { conversationId, form, applyBackendTrip } = useTrip();
   const pathname = usePathname();
   const router = useRouter();
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    if (!conversationId) return;
+    try {
+      const savedMessages = localStorage.getItem(`hk_chat_msg_${conversationId}`);
+      if (savedMessages) setMessages(JSON.parse(savedMessages));
+
+      const savedTabs = localStorage.getItem(`hk_chat_tabs_${conversationId}`);
+      if (savedTabs) setTabs(JSON.parse(savedTabs));
+
+      const savedActiveTab = localStorage.getItem(`hk_chat_active_${conversationId}`);
+      if (savedActiveTab) setActiveTabId(savedActiveTab);
+
+      const savedPanel = localStorage.getItem(`hk_chat_panel_${conversationId}`);
+      if (savedPanel) setIsPanelCollapsed(savedPanel === 'true');
+    } catch (e) {
+      console.error('Failed to load chat state:', e);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, [conversationId]);
+
+  // Save to localStorage on change
+  useEffect(() => {
+    if (isLoaded) localStorage.setItem(`hk_chat_msg_${conversationId}`, JSON.stringify(messages));
+  }, [messages, isLoaded, conversationId]);
+
+  useEffect(() => {
+    if (isLoaded) localStorage.setItem(`hk_chat_tabs_${conversationId}`, JSON.stringify(tabs));
+  }, [tabs, isLoaded, conversationId]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      if (activeTabId) localStorage.setItem(`hk_chat_active_${conversationId}`, activeTabId);
+      else localStorage.removeItem(`hk_chat_active_${conversationId}`);
+    }
+  }, [activeTabId, isLoaded, conversationId]);
+
+  useEffect(() => {
+    if (isLoaded) localStorage.setItem(`hk_chat_panel_${conversationId}`, isPanelCollapsed.toString());
+  }, [isPanelCollapsed, isLoaded, conversationId]);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : 'unset';
@@ -107,14 +154,21 @@ export default function ChatBot({ isOpen, onClose }) {
 
       const data = await res.json();
       if (data.service_status) setServiceStatus(data.service_status);
+      if (data.used_model) setUsedModel(data.used_model);
+      if (data.live_sources) setLiveSources(data.live_sources);
       
-      // Handle Route Intent Split View
+      // Handle Tabs (Route Map or Widgets)
+      let newTab = null;
       if (data.route_intent) {
-          if (!currentRouteIntent || currentRouteIntent.origin !== data.route_intent.origin || currentRouteIntent.destination !== data.route_intent.destination) {
-              setMapIframeLoading(true);
-          }
-          setCurrentRouteIntent(data.route_intent);
-          setIsMapCollapsed(false);
+          newTab = { id: Date.now().toString(), type: 'map', payload: data.route_intent, timestamp: now(), liveSources: data.live_sources || [] };
+      } else if (data.ui_widget) {
+          newTab = { id: Date.now().toString(), type: data.ui_widget.widget_type, payload: data.ui_widget.payload, timestamp: now(), liveSources: data.live_sources || [] };
+      }
+      
+      if (newTab) {
+          setTabs(prev => [...prev, newTab]);
+          setActiveTabId(newTab.id);
+          setIsPanelCollapsed(false);
       }
       
       const msgId = data.message_id || crypto.randomUUID();
@@ -138,6 +192,16 @@ export default function ChatBot({ isOpen, onClose }) {
       clearTimeout(timer);
       setIsLoading(false);
     }
+  };
+
+  const closeTab = (id) => {
+    setTabs(prev => {
+        const next = prev.filter(t => t.id !== id);
+        if (activeTabId === id) {
+            setActiveTabId(next.length > 0 ? next[next.length - 1].id : null);
+        }
+        return next;
+    });
   };
 
   const handleSubmit = (e) => {
@@ -183,7 +247,7 @@ export default function ChatBot({ isOpen, onClose }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90]" onClick={onClose} aria-hidden="true" />
-      <div className={`fixed top-6 bottom-8 left-[5%] right-[5%] sm:top-1/2 sm:left-1/2 sm:bottom-auto sm:right-auto sm:-translate-x-1/2 sm:-translate-y-1/2 ${currentRouteIntent ? 'sm:w-[95vw] sm:max-w-7xl' : 'sm:w-[90vw] sm:max-w-5xl'} sm:h-[90vh] bg-white rounded-3xl shadow-2xl z-[100] flex flex-col overflow-hidden transition-all duration-300`}>
+      <div className={`fixed top-6 bottom-8 left-[5%] right-[5%] sm:top-1/2 sm:left-1/2 sm:bottom-auto sm:right-auto sm:-translate-x-1/2 sm:-translate-y-1/2 ${tabs.length > 0 ? 'sm:w-[95vw] sm:max-w-7xl' : 'sm:w-[90vw] sm:max-w-5xl'} sm:h-[90vh] bg-white rounded-3xl shadow-2xl z-[100] flex flex-col overflow-hidden transition-all duration-300`}>
         <div className="bg-gradient-to-b from-[#0c59cc] to-[#1bb38e] pt-6 pb-5 px-6 flex items-center justify-between relative shrink-0 shadow-md z-10">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -196,7 +260,7 @@ export default function ChatBot({ isOpen, onClose }) {
               <h2 className="text-white font-bold text-2xl tracking-wide leading-tight">Tamago</h2>
               <p className="text-white text-sm opacity-90 mt-0.5">
                 {t('ready')} <br />
-                <span className="text-xs opacity-75">Using AI model: gpt-oss-120b</span>
+                <span className="text-xs opacity-75">Using AI model: {usedModel}</span>
               </p>
             </div>
           </div>
@@ -207,8 +271,8 @@ export default function ChatBot({ isOpen, onClose }) {
 
 
 
-        <div className={`flex flex-1 overflow-hidden ${currentRouteIntent ? 'flex-col md:flex-row' : 'flex-col'}`}>
-          <div className={`flex flex-col transition-all duration-300 ease-in-out ${currentRouteIntent ? (isMapCollapsed ? 'flex-1 border-b md:border-b-0 md:border-r border-gray-200' : 'flex-1 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-200') : 'w-full h-full'}`}>
+        <div className={`flex flex-1 overflow-hidden ${tabs.length > 0 ? 'flex-col md:flex-row' : 'flex-col'}`}>
+          <div className={`flex flex-col transition-all duration-300 ease-in-out ${tabs.length > 0 ? (isPanelCollapsed ? 'flex-1 border-b md:border-b-0 md:border-r border-gray-200' : 'flex-1 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-200') : 'w-full h-full'}`}>
             <div className="flex-1 p-4 overflow-y-auto overscroll-none bg-gray-50 flex flex-col gap-6">
               {messages.map((msg, index) => (
                 <div key={index} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -331,65 +395,15 @@ export default function ChatBot({ isOpen, onClose }) {
             </div>
           </div>
 
-          {currentRouteIntent && (
-            <div 
-                className={`transition-all duration-300 ease-in-out flex flex-col bg-white overflow-hidden relative md:border-l border-gray-200 shrink-0 ${isMapCollapsed ? 'h-14 md:h-full w-full md:w-12 cursor-pointer hover:bg-gray-50' : 'h-[45vh] md:h-full w-full md:w-1/2'}`}
-                onClick={isMapCollapsed ? () => setIsMapCollapsed(false) : undefined}
-            >
-              {isMapCollapsed ? (
-                  <div className="h-full w-full flex items-center justify-center relative">
-                    <div className="md:-rotate-90 whitespace-nowrap text-blue-600 font-bold flex items-center gap-2 tracking-wide">
-                        🗺️ Open Map
-                    </div>
-                  </div>
-              ) : (
-                  <>
-                    <div className="p-4 flex justify-between items-center bg-gray-50 border-b border-gray-200 shrink-0">
-                      <div className="flex flex-col gap-2">
-                        <h3 className="font-bold text-[#0c4ca3] text-lg flex items-center gap-2">
-                          📍 {currentRouteIntent.origin} ➔ {currentRouteIntent.destination}
-                          <span className="text-gray-500 text-sm ml-2 bg-gray-200 px-2 py-1 rounded-full flex items-center gap-1">
-                            {currentRouteIntent.mode === 'train' ? '🚆' : currentRouteIntent.mode === 'bus' ? '🚌' : currentRouteIntent.mode === 'walk' ? '🚶' : '🚗'} {currentRouteIntent.mode}
-                          </span>
-                        </h3>
-                        <a 
-                          href={getGoogleMapsUrl(currentRouteIntent.origin, currentRouteIntent.destination, currentRouteIntent.mode)}
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="bg-blue-600 text-white px-4 py-2 w-fit rounded-full shadow hover:bg-blue-700 text-sm font-semibold flex items-center gap-2 transition-colors"
-                        >
-                          🗺️ Open App
-                        </a>
-                      </div>
-                      <button 
-                          onClick={() => setIsMapCollapsed(true)}
-                          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition-colors rotate-90 md:rotate-0"
-                          aria-label="Collapse Map"
-                      >
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6" /></svg>
-                      </button>
-                    </div>
-                    <div className="flex-1 w-full relative bg-gray-50">
-                      {mapIframeLoading && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-50/50 z-10 transition-opacity duration-300">
-                            <div className="w-10 h-10 border-4 border-[#0c4ca3] border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <p className="text-[#0c4ca3] font-bold animate-pulse">Loading Google Maps...</p>
-                          </div>
-                      )}
-                      <iframe
-                          width="100%"
-                          height="100%"
-                          style={{ border: 0 }}
-                          loading="lazy"
-                          allowFullScreen
-                          onLoad={() => setMapIframeLoading(false)}
-                          src={`https://maps.google.com/maps?saddr=${encodeURIComponent(currentRouteIntent.origin)}&daddr=${encodeURIComponent(currentRouteIntent.destination)}&dirflg=${currentRouteIntent.mode === 'train' || currentRouteIntent.mode === 'bus' ? 'r' : currentRouteIntent.mode === 'walk' ? 'w' : 'd'}&output=embed`}
-                      ></iframe>
-                    </div>
-                  </>
-              )}
-            </div>
-          )}
+          <RightPanel 
+            tabs={tabs} 
+            activeTabId={activeTabId} 
+            setActiveTabId={setActiveTabId} 
+            isPanelCollapsed={isPanelCollapsed} 
+            setIsPanelCollapsed={setIsPanelCollapsed} 
+            closeTab={closeTab} 
+            liveSources={tabs.find(t => t.id === activeTabId)?.liveSources || []}
+          />
         </div>
       </div>
     </>

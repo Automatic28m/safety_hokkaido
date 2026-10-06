@@ -64,6 +64,8 @@ class RAGPipeline:
         route_result = self.router.classify(query, chat_history)
         route = route_result["route"]   # "general" | "rag" | "realtime" | "rag+realtime"
         route_intent = route_result.get("route_intent")
+        ui_widget = route_result.get("ui_widget")
+        target_city = route_result.get("target_city") or "Sapporo"
 
         # ── DL05 QUERY REFORMULATION: make standalone if needed ─────────────
         if config.USE_MEMORY and chat_history:
@@ -116,7 +118,7 @@ class RAGPipeline:
         # ── LIVE DATA: node 03 runs the node 04 tools itself ────────────────
         live_data_list = []
         if active_agents.get("weather"):
-            live_data_list.append(get_real_time_weather("Sapporo"))
+            live_data_list.append(get_real_time_weather(target_city))
         if active_agents.get("disaster"):
             live_data_list.append(get_disaster_warnings())
         if active_agents.get("train"):
@@ -158,9 +160,29 @@ class RAGPipeline:
             )
             live_data_list.append(ui_note)
 
+        if ui_widget:
+            w_type = ui_widget.get("widget_type")
+            if w_type == "weather_forecast":
+                ui_msg = "The System has ALREADY opened an interactive hourly weather forecast widget on the right panel. DO NOT list hourly data in your chat response. Briefly tell the user to look at the panel, and summarize the overall day's weather."
+            elif w_type == "flight_board":
+                ui_msg = "The System has ALREADY opened an interactive flight status board on the right panel. DO NOT list all flights in your chat response. Briefly tell the user to check the flight board on the right, and answer any specific flight questions they had."
+            else:
+                ui_msg = f"The System has opened a {w_type} widget on the right panel. Please inform the user."
+
+            widget_note = LiveDataSnapshot(
+                provider="SystemUI",
+                kind="ui_action",
+                scope={"region": "Local"},
+                status="ok",
+                fetched_at=datetime.utcnow().isoformat() + "Z",
+                expires_at=datetime.utcnow().isoformat() + "Z",
+                data={"summary": ui_msg}
+            )
+            live_data_list.append(widget_note)
+
         # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
         messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
-        json_string_from_groq = self._call_groq(messages)
+        json_string_from_groq, used_model = self._call_groq(messages)
         decision_dict = self.generator.parse_llm_response(json_string_from_groq)
 
         # ── RESULT: combine the decision with the chunks and live data for node 02 ──
@@ -172,6 +194,8 @@ class RAGPipeline:
             "degraded": decision_dict["degraded"],
             "notices": decision_dict["notices"],
             "route_intent": route_intent,
+            "ui_widget": ui_widget,
+            "used_model": used_model,
         }
 
     def ask(self, query: str, chat_history=None, enabled_agents=None):
@@ -181,28 +205,37 @@ class RAGPipeline:
             "enabled_agents": enabled_agents,
         })["reply"]
 
-    def _call_groq(self, messages: list) -> str:
-        response = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {config.GROQ_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": config.LLM_MODEL,
-                "messages": messages,
-                "max_tokens": 800,
-            },
-        )
+    def _call_groq(self, messages: list) -> tuple[str, str]:
+        used_model = config.LLM_MODEL
+        payload = {
+            "model": used_model,
+            "messages": messages,
+            "max_tokens": 800,
+        }
+        headers = {
+            "Authorization": f"Bearer {config.GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        
+        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+        
+        # Fallback mechanism if the primary model hits a rate limit
+        if response.status_code == 429:
+            fallback_model = "qwen/qwen3.8-27b"
+            print(f"[Fallback] Rate limit reached for {config.LLM_MODEL}. Switching to alternative model: {fallback_model}...")
+            payload["model"] = fallback_model
+            used_model = fallback_model
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+            
         if response.status_code != 200:
             error_msg = f"LLM API Error {response.status_code}: {response.text}"
             print(f"[ERROR] {error_msg}")
             # If the context is too large, Groq often returns 400 or 413
             if "context" in response.text.lower() or "limit" in response.text.lower() or response.status_code in [400, 413, 429]:
-                return "ขออภัยค่ะ ข้อมูลที่ดึงมามีขนาดใหญ่เกินกว่าที่ระบบจะประมวลผลได้ (Context Window Exceeded) กรุณาจำกัดคำถามให้เจาะจงขึ้น"
-            return f"ขออภัยค่ะ เกิดข้อผิดพลาดจาก LLM API: {response.text}"
+                return "ขออภัยค่ะ ข้อมูลที่ดึงมามีขนาดใหญ่เกินกว่าที่ระบบจะประมวลผลได้ (Context Window Exceeded) กรุณาจำกัดคำถามให้เจาะจงขึ้น", used_model
+            return f"ขออภัยค่ะ เกิดข้อผิดพลาดจาก LLM API: {response.text}", used_model
             
         try:
-            return response.json()["choices"][0]["message"]["content"]
+            return response.json()["choices"][0]["message"]["content"], used_model
         except KeyError:
-            return f"ขออภัยค่ะ รูปแบบข้อมูลที่ตอบกลับจาก LLM ไม่ถูกต้อง: {response.text}"
+            return f"ขออภัยค่ะ รูปแบบข้อมูลที่ตอบกลับจาก LLM ไม่ถูกต้อง: {response.text}", used_model
