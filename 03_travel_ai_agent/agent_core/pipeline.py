@@ -182,18 +182,25 @@ class RAGPipeline:
         })["reply"]
 
     def _call_groq(self, messages: list) -> str:
-        response = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {config.GROQ_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": config.LLM_MODEL,
-                "messages": messages,
-                "max_tokens": 800,
-            },
-        )
+        payload = {
+            "model": config.LLM_MODEL,
+            "messages": messages,
+            "max_tokens": 800,
+        }
+        headers = {
+            "Authorization": f"Bearer {config.GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        
+        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+        
+        # Fallback mechanism if the primary model hits a rate limit
+        if response.status_code == 429:
+            fallback_model = "qwen/qwen3.8-27b"
+            print(f"[Fallback] Rate limit reached for {config.LLM_MODEL}. Switching to alternative model: {fallback_model}...")
+            payload["model"] = fallback_model
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+            
         if response.status_code != 200:
             error_msg = f"LLM API Error {response.status_code}: {response.text}"
             print(f"[ERROR] {error_msg}")

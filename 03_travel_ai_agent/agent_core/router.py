@@ -82,7 +82,7 @@ class Router:
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
         self.api_key = config.GROQ_API_KEY
         # Use a smaller, cheaper, faster model for routing only
-        self.router_model = "openai/gpt-oss-20b"   # Smallest available model — fast & cheap for routing
+        self.router_model = "qwen/qwen3.8-27b"   # Use Qwen 27B model for routing
 
     def classify(self, query: str, chat_history: list = None) -> dict:
         """

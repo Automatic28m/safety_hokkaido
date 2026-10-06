@@ -5,7 +5,7 @@ class QueryTransformer:
     def __init__(self):
         self.api_key = config.GROQ_API_KEY
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
-        self.model = config.LLM_MODEL
+        self.model = "qwen/qwen3.8-27b"
         
     def translate_to_english(self, query):
         """Translates a foreign query into English so the database can understand it perfectly."""
