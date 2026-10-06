@@ -111,28 +111,53 @@ class Router:
         messages.append({"role": "user", "content": query})
 
         try:
-            response = requests.post(
-                self.api_url,
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": self.router_model,
-                    "messages": messages,
-                    "temperature": 0.0,
-                    "max_tokens": 512,
-                    # NOTE: response_format json_object is NOT supported by all models
-                    # We parse JSON manually from the raw text instead
-                },
-                timeout=10
-            )
+            raw = None
+            if self.api_key:
+                try:
+                    response = requests.post(
+                        self.api_url,
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": self.router_model,
+                            "messages": messages,
+                            "temperature": 0.0,
+                            "max_tokens": 512,
+                        },
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        raw = response.json()
+                except Exception as e:
+                    print(f"[Router Groq Error] {e}")
 
-            raw = response.json()
+            # Fallback to Gemini if Groq failed or not configured
+            if (not raw or "choices" not in raw) and getattr(config, "GEMINI_API_KEY", ""):
+                try:
+                    gemini_res = requests.post(
+                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {config.GEMINI_API_KEY}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": getattr(config, "GEMINI_MODEL", "gemini-3.5-flash"),
+                            "messages": messages,
+                            "temperature": 0.0,
+                            "max_tokens": 512,
+                            "response_format": {"type": "json_object"}
+                        },
+                        timeout=10
+                    )
+                    if gemini_res.status_code == 200:
+                        raw = gemini_res.json()
+                except Exception as eg:
+                    print(f"[Router Gemini Error] {eg}")
 
-            # Bug fix: guard against API errors that return no 'choices'
-            if "choices" not in raw:
-                raise ValueError(f"Groq router API error: {raw.get('error', raw)}")
+            if not raw or "choices" not in raw:
+                raise ValueError("Both Groq and Gemini router API failed")
 
             content = raw["choices"][0]["message"]["content"]
 
