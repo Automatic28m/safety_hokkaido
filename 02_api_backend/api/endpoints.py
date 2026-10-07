@@ -171,8 +171,9 @@ def create_router(
                     )
                 else:
                     reply = pipeline.ask(original_query, enabled_agents=enabled_agents)
-                status, route_intent, degraded, notices, evidence, live_sources = (
+                status, route_intent, ui_widget, degraded, notices, evidence, live_sources = (
                     "ok",
+                    None,
                     None,
                     False,
                     [],

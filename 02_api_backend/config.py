@@ -35,17 +35,17 @@ class Config:
     # Extremely accurate English Cross-Encoder
     RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     # How many chunks make it past the Reranker to the final LLM
-    FINAL_TOP_K = 3 
+    FINAL_TOP_K = 2 
 
     # --- LLM Settings (Groq) ---
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     METEOSOURCE_API_KEY = os.getenv("METEOSOURCE_API_KEY", "")
     # Switch model to bypass the rate limit on the previous model
-    LLM_MODEL = "openai/gpt-oss-120b"
+    LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
 
     # --- Fallback LLM Settings (Google Gemini) ---
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     
     # --- System Prompt ---
     SYSTEM_PROMPT = """You are Tamago, a friendly, warm, and helpful female AI guide for Hokkaido tourists. 
