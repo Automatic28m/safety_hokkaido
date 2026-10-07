@@ -40,6 +40,7 @@ class ChatRequest(BaseModel):
     message: Optional[str] = None
     messages: Optional[List[ChatMessage]] = Field(default=None, max_length=50)
     enabled_agents: Optional[Dict[str, bool]] = None
+    language: Optional[str] = None
 
     @model_validator(mode="after")
     def _validate_query(self) -> "ChatRequest":
@@ -78,6 +79,7 @@ class NormalizedAskRequest(BaseModel):
     enabled_agents: Dict[str, bool]
     received_at: str
     input_mode: str
+    language: str
 
 
 class RouteIntent(BaseModel):

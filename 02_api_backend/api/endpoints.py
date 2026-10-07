@@ -119,6 +119,7 @@ def create_router(
             enabled_agents=enabled_agents,
             received_at=datetime.now(timezone.utc).isoformat(),
             input_mode=input_mode,
+            language=payload.language or "th",
         )
 
         try:
@@ -171,8 +172,9 @@ def create_router(
                     )
                 else:
                     reply = pipeline.ask(original_query, enabled_agents=enabled_agents)
-                status, route_intent, degraded, notices, evidence, live_sources = (
+                status, route_intent, ui_widget, degraded, notices, evidence, live_sources = (
                     "ok",
+                    None,
                     None,
                     False,
                     [],

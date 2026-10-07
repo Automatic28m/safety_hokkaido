@@ -1,3 +1,4 @@
+import json
 import requests
 from datetime import datetime
 from external_data.models import LiveDataSnapshot
@@ -41,6 +42,7 @@ class RAGPipeline:
         query = request["original_query"]
         raw_history = request.get("chat_history") or []
         enabled_agents = request.get("enabled_agents")
+        language = request.get("language", "th")
 
         # Exclude the last message if it's the current query to avoid duplication
         if raw_history and raw_history[-1].get("role") == "user" and raw_history[-1].get("content") == query:
@@ -181,7 +183,7 @@ class RAGPipeline:
             live_data_list.append(widget_note)
 
         # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
-        messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
+        messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list, language=language)
         json_string_from_groq, used_model = self._call_groq(messages)
         decision_dict = self.generator.parse_llm_response(json_string_from_groq)
 
@@ -207,35 +209,106 @@ class RAGPipeline:
 
     def _call_groq(self, messages: list) -> tuple[str, str]:
         used_model = config.LLM_MODEL
-        payload = {
-            "model": used_model,
-            "messages": messages,
-            "max_tokens": 800,
-        }
-        headers = {
-            "Authorization": f"Bearer {config.GROQ_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        
-        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
-        
-        # Fallback mechanism if the primary model hits a rate limit
-        if response.status_code == 429:
-            fallback_model = "qwen/qwen3.8-27b"
-            print(f"[Fallback] Rate limit reached for {config.LLM_MODEL}. Switching to alternative model: {fallback_model}...")
-            payload["model"] = fallback_model
-            used_model = fallback_model
-            response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
-            
-        if response.status_code != 200:
-            error_msg = f"LLM API Error {response.status_code}: {response.text}"
-            print(f"[ERROR] {error_msg}")
-            # If the context is too large, Groq often returns 400 or 413
-            if "context" in response.text.lower() or "limit" in response.text.lower() or response.status_code in [400, 413, 429]:
-                return "ขออภัยค่ะ ข้อมูลที่ดึงมามีขนาดใหญ่เกินกว่าที่ระบบจะประมวลผลได้ (Context Window Exceeded) กรุณาจำกัดคำถามให้เจาะจงขึ้น", used_model
-            return f"ขออภัยค่ะ เกิดข้อผิดพลาดจาก LLM API: {response.text}", used_model
-            
+        response = None
+
+        if config.GROQ_API_KEY:
+            payload = {
+                "model": used_model,
+                "messages": messages,
+                "max_tokens": 800,
+            }
+            headers = {
+                "Authorization": f"Bearer {config.GROQ_API_KEY}",
+                "Content-Type": "application/json",
+            }
+            try:
+                response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=12)
+                # Fallback mechanism if the primary model hits a rate limit or size limit (413/429)
+                if response.status_code in (413, 429):
+                    fallback_model = "qwen/qwen3.8-27b"
+                    print(f"[Fallback] Groq status {response.status_code} on {config.LLM_MODEL}. Switching to alternative model: {fallback_model}...")
+                    payload["model"] = fallback_model
+                    used_model = fallback_model
+                    response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=12)
+            except Exception as e:
+                print(f"[Groq Exception] {e}")
+                response = None
+
+        # Fallback to Google Gemini if Groq failed, rate-limited, context-exceeded, or no GROQ_API_KEY
+        needs_gemini = (
+            response is None
+            or response.status_code in [400, 413, 429, 500, 502, 503]
+            or "context" in getattr(response, "text", "").lower()
+            or "limit" in getattr(response, "text", "").lower()
+        )
+
+        gemini_api_key = getattr(config, "GEMINI_API_KEY", "")
+        if needs_gemini and gemini_api_key:
+            gemini_model = getattr(config, "GEMINI_MODEL", "gemini-2.0-flash")
+            print(f"[Fallback] Activating Google Gemini ({gemini_model}) as backup...")
+            try:
+                gemini_headers = {
+                    "Authorization": f"Bearer {gemini_api_key}",
+                    "Content-Type": "application/json",
+                }
+                gemini_payload = {
+                    "model": gemini_model,
+                    "messages": messages,
+                    "max_tokens": 4096,
+                    "response_format": {"type": "json_object"}
+                }
+                gemini_res = requests.post(
+                    "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                    headers=gemini_headers,
+                    json=gemini_payload,
+                    timeout=25
+                )
+                if gemini_res.status_code == 200:
+                    content = gemini_res.json()["choices"][0]["message"]["content"]
+                    return content, gemini_model
+                elif gemini_res.status_code in [503, 429]:
+                    lite_model = "gemini-1.5-flash"
+                    print(f"[Fallback] Gemini {gemini_model} busy ({gemini_res.status_code}). Switching to {lite_model}...")
+                    gemini_payload["model"] = lite_model
+                    lite_res = requests.post(
+                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                        headers=gemini_headers,
+                        json=gemini_payload,
+                        timeout=25
+                    )
+                    if lite_res.status_code == 200:
+                        content = lite_res.json()["choices"][0]["message"]["content"]
+                        return content, lite_model
+                    else:
+                        print(f"[Gemini Fallback Error] {lite_res.status_code}: {lite_res.text}")
+                else:
+                    print(f"[Gemini Fallback Error] {gemini_res.status_code}: {gemini_res.text}")
+            except Exception as e:
+                print(f"[Gemini Fallback Exception] {e}")
+
+        # If all LLM providers failed, return a valid JSON payload that Generator parses cleanly
+        if response is None or response.status_code != 200:
+            error_detail = response.text if response is not None else "Connection error"
+            print(f"[ERROR] LLM API Failure: {error_detail}")
+            fallback_json = json.dumps({
+                "reply": "ขออภัยค่ะ ขณะนี้ระบบ AI ให้บริการผู้ใช้งานจำนวนมาก กรุณาลองถามใหม่อีกครั้งในอีกสักครู่ค่ะ",
+                "safety_level": "unknown",
+                "used_evidence_ids": [],
+                "used_live_sources": [],
+                "degraded": True,
+                "notices": ["llm_service_degraded"]
+            }, ensure_ascii=False)
+            return fallback_json, used_model
+
         try:
             return response.json()["choices"][0]["message"]["content"], used_model
         except KeyError:
-            return f"ขออภัยค่ะ รูปแบบข้อมูลที่ตอบกลับจาก LLM ไม่ถูกต้อง: {response.text}", used_model
+            fallback_json = json.dumps({
+                "reply": "ขออภัยค่ะ เกิดข้อผิดพลาดในการประมวลผลคำตอบ กรุณาลองใหม่อีกครั้งค่ะ",
+                "safety_level": "unknown",
+                "used_evidence_ids": [],
+                "used_live_sources": [],
+                "degraded": True,
+                "notices": ["llm_response_invalid"]
+            }, ensure_ascii=False)
+            return fallback_json, used_model
