@@ -42,6 +42,7 @@ class RAGPipeline:
         query = request["original_query"]
         raw_history = request.get("chat_history") or []
         enabled_agents = request.get("enabled_agents")
+        language = request.get("language", "th")
 
         # Exclude the last message if it's the current query to avoid duplication
         if raw_history and raw_history[-1].get("role") == "user" and raw_history[-1].get("content") == query:
@@ -182,7 +183,7 @@ class RAGPipeline:
             live_data_list.append(widget_note)
 
         # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
-        messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list)
+        messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list, language=language)
         json_string_from_groq, used_model = self._call_groq(messages)
         decision_dict = self.generator.parse_llm_response(json_string_from_groq)
 
