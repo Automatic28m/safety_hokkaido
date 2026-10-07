@@ -66,14 +66,20 @@ KEYWORD_RULES = {
         "right now", "currently", "today", "at the moment", "live",
         "weather", "raining", "snowing", "temperature", "forecast",
         "train", "delay", "cancelled", "running", "jr",
-        "earthquake now", "warning now", "alert now", "is it safe now"
+        "earthquake now", "warning now", "alert now", "is it safe now",
+        "อากาศ", "สภาพอากาศ", "ฝน", "หิมะ", "อุณหภูมิ", "พยากรณ์", "หนาว",
+        "รถไฟ", "ดีเลย์", "ยกเลิก", "ตอนนี้", "วันนี้", "เดินทางได้ไหม",
+        "ปลอดภัยไหม", "เที่ยวบิน", "สนามบิน", "ถนน", "ปิดทาง"
     ],
     "rag": [
         "earthquake", "tsunami", "blizzard", "snowstorm", "frostbite",
         "hypothermia", "evacuate", "evacuation", "shelter", "emergency",
         "disaster", "trapped", "stuck", "hurt", "injured", "shaking",
         "safe", "danger", "warning", "what should i do", "what do i do",
-        "help", "ambulance", "police", "119", "110"
+        "help", "ambulance", "police", "119", "110",
+        "แผ่นดินไหว", "สึนามิ", "พายุหิมะ", "หนาวจัด", "อพยพ", "ที่หลบภัย",
+        "ฉุกเฉิน", "ภัยพิบัติ", "ติดอยู่", "บาดเจ็บ", "ปลอดภัย", "อันตราย",
+        "เตือนภัย", "ช่วยด้วย", "กู้ภัย", "ตำรวจ"
     ],
 }
 
@@ -94,8 +100,7 @@ class Router:
     def __init__(self):
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
         self.api_key = config.GROQ_API_KEY
-        # Use a smaller, cheaper, faster model for routing only
-        self.router_model = "qwen/qwen3.8-27b"   # Use Qwen 27B model for routing
+        self.router_model = getattr(config, "LLM_MODEL", "openai/gpt-oss-120b")
 
     def classify(self, query: str, chat_history: list = None) -> dict:
         """
@@ -114,25 +119,29 @@ class Router:
         try:
             raw = None
             if self.api_key:
-                try:
-                    response = requests.post(
-                        self.api_url,
-                        headers={
-                            "Authorization": f"Bearer {self.api_key}",
-                            "Content-Type": "application/json"
-                        },
-                        json={
-                            "model": self.router_model,
-                            "messages": messages,
-                            "temperature": 0.0,
-                            "max_tokens": 512,
-                        },
-                        timeout=10
-                    )
-                    if response.status_code == 200:
-                        raw = response.json()
-                except Exception as e:
-                    print(f"[Router Groq Error] {e}")
+                for model_candidate in [self.router_model, "openai/gpt-oss-20b"]:
+                    try:
+                        response = requests.post(
+                            self.api_url,
+                            headers={
+                                "Authorization": f"Bearer {self.api_key}",
+                                "Content-Type": "application/json"
+                            },
+                            json={
+                                "model": model_candidate,
+                                "messages": messages,
+                                "temperature": 0.0,
+                                "max_tokens": 512,
+                            },
+                            timeout=10
+                        )
+                        if response.status_code == 200:
+                            raw = response.json()
+                            break
+                        elif response.status_code in (413, 429):
+                            print(f"[Router Groq {model_candidate}] {response.status_code}. Trying fallback...")
+                    except Exception as e:
+                        print(f"[Router Groq Error] {e}")
 
             # Fallback to Gemini if Groq failed or not configured
             if (not raw or "choices" not in raw) and getattr(config, "GEMINI_API_KEY", ""):
@@ -144,7 +153,7 @@ class Router:
                             "Content-Type": "application/json"
                         },
                         json={
-                            "model": getattr(config, "GEMINI_MODEL", "gemini-2.0-flash"),
+                            "model": getattr(config, "GEMINI_MODEL", "gemini-3.8-flash"),
                             "messages": messages,
                             "temperature": 0.0,
                             "max_tokens": 512,
@@ -185,11 +194,13 @@ class Router:
             # Apply keyword fallback if confidence is too low
             confidence = result.get("confidence", 1.0)
             if confidence < CONFIDENCE_THRESHOLD:
-                fallback_route = self._keyword_fallback(query)
+                fallback_route, detected_city = self._keyword_fallback(query)
                 if fallback_route:
                     print(f"[Router] Low confidence ({confidence:.2f}). Keyword fallback → '{fallback_route}'")
                     result["route"] = fallback_route
                     result["reasoning"] = "[Keyword fallback] Overrode low-confidence LLM route."
+                    if not result.get("target_city") and detected_city:
+                        result["target_city"] = detected_city
 
             # Ensure optional fields are explicitly in the result
             result["route_intent"] = result.get("route_intent", None)
@@ -205,16 +216,16 @@ class Router:
 
         except Exception as e:
             print(f"[Router] Classification failed: {e}")
-            fallback_route = self._keyword_fallback(query)
+            fallback_route, detected_city = self._keyword_fallback(query)
             if fallback_route:
-                print(f"[Router] System error. Keyword fallback → '{fallback_route}'")
+                print(f"[Router] System error. Keyword fallback → '{fallback_route}' (City: {detected_city})")
                 return {
                     "route": fallback_route,
-                    "confidence": 0.5,
-                    "reasoning": "Router error — rescued by keyword fallback.",
+                    "confidence": 0.8,
+                    "reasoning": f"Router error — rescued by keyword fallback. City: {detected_city}",
                     "route_intent": None,
-                    "ui_widget": None,
-                    "target_city": None
+                    "ui_widget": {"widget_type": "weather_forecast", "payload": {"location": detected_city}} if detected_city and ("weather" in query.lower() or "อากาศ" in query) else None,
+                    "target_city": detected_city
                 }
             
             print("[Router] Defaulting to 'rag'.")
@@ -224,22 +235,44 @@ class Router:
                 "reasoning": "Router error — safe default to RAG.",
                 "route_intent": None,
                 "ui_widget": None,
-                "target_city": None
+                "target_city": detected_city
             }
 
-    def _keyword_fallback(self, query: str) -> Optional[str]:
+    def _keyword_fallback(self, query: str) -> tuple[Optional[str], Optional[str]]:
         """
-        Simple keyword-based rule fallback when LLM confidence is low.
-        Returns the matched route, or None if no keywords matched.
+        Simple keyword-based rule fallback when LLM confidence is low or API fails.
+        Returns (matched_route, detected_city).
         """
         q = query.lower()
-        realtime_hit = any(kw in q for kw in KEYWORD_RULES["realtime"])
-        rag_hit = any(kw in q for kw in KEYWORD_RULES["rag"])
+        realtime_hit = any(kw in q or kw in query for kw in KEYWORD_RULES["realtime"])
+        rag_hit = any(kw in q or kw in query for kw in KEYWORD_RULES["rag"])
 
+        detected_city = None
+        if "otaru" in q or "โอตารุ" in query:
+            detected_city = "Otaru"
+        elif "sapporo" in q or "ซัปโปโร" in query:
+            detected_city = "Sapporo"
+        elif "hakodate" in q or "ฮาโกดาเตะ" in query:
+            detected_city = "Hakodate"
+        elif "asahikawa" in q or "อาซาฮิกาวะ" in query:
+            detected_city = "Asahikawa"
+        elif "niseko" in q or "นิเซโกะ" in query:
+            detected_city = "Niseko"
+        elif "chitose" in q or "ชิโตเสะ" in query:
+            detected_city = "New Chitose Airport"
+        elif "furano" in q or "ฟุราโนะ" in query:
+            detected_city = "Furano"
+        elif "noboribetsu" in q or "โนโบริเบทสึ" in query:
+            detected_city = "Noboribetsu"
+        elif "kushiro" in q or "คุชิโระ" in query:
+            detected_city = "Kushiro"
+
+        matched_route = None
         if realtime_hit and rag_hit:
-            return "rag+realtime"
+            matched_route = "rag+realtime"
         elif realtime_hit:
-            return "realtime"
+            matched_route = "realtime"
         elif rag_hit:
-            return "rag"
-        return None
+            matched_route = "rag"
+
+        return matched_route, detected_city
