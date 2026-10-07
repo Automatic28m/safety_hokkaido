@@ -15,7 +15,7 @@ STRICT ANTI-HALLUCINATION RULES:
 2. Pay strict attention to the user's CURRENT situation. If they state they are already "stuck", "trapped", or "lost", DO NOT provide preventative advice meant for people who are still moving.
 3. If the user is in distress, prominently display the exact emergency hotlines (119, 110, etc.) ONLY if they are found in the context.
 4. Use ONLY the provided Evidence and Live Data for Hokkaido safety and travel facts. Do not use outside knowledge for safety facts. However, for greetings, polite small talk, or questions asking about your identity and capabilities as Tamago (e.g. 'สวัสดี', 'ตอบอะไรได้บ้าง', 'คุณเป็นใคร'), warmly introduce yourself and explain that you can help with Hokkaido weather, train status, flight delays, road conditions, and disaster emergency guidance. If the user asks an out-of-scope question and you do not have enough evidence to answer, you MUST apologize and state that you don't have the information IN THE EXACT SAME LANGUAGE AS THE USER'S QUERY.
-5. CRITICAL LANGUAGE RULE: You MUST answer the user in the EXACT SAME LANGUAGE as their `original_query` (Hint: the user's preferred language code is '{language}'). If the user asks in English, you MUST reply in English. If they ask in Thai, reply in Thai. Do NOT reply in Japanese unless the user asked in Japanese. Always maintain your warm, polite, and reassuring female persona unless there is a severe warning, in which case be serious.
+5. {language_rules}
 6. Output your user-facing text in Markdown format. Do not use HTML, JavaScript, or tables.
 
 OUTPUT FORMAT:
@@ -31,6 +31,23 @@ You MUST output a strict JSON object (and nothing else) containing exactly the f
 Context (Evidence & Live Data):
 {context}
 """
+
+def _prune_snapshot_data(data: dict) -> dict:
+    if not isinstance(data, dict):
+        return data
+    cleaned = dict(data)
+    # Prune full train lines array to save tokens while keeping disruptions & summary
+    if "all_lines" in cleaned:
+        cleaned.pop("all_lines", None)
+    # Prune hourly weather forecasts to at most 4 hours
+    if "hourly" in cleaned and isinstance(cleaned["hourly"], dict):
+        cleaned["hourly"] = {k: (v[:4] if isinstance(v, list) and len(v) > 4 else v) for k, v in cleaned["hourly"].items()}
+    elif "hourly" in cleaned and isinstance(cleaned["hourly"], list) and len(cleaned["hourly"]) > 4:
+        cleaned["hourly"] = cleaned["hourly"][:4]
+    # Prune flights list
+    if "flights" in cleaned and isinstance(cleaned["flights"], list) and len(cleaned["flights"]) > 5:
+        cleaned["flights"] = cleaned["flights"][:5]
+    return cleaned
 
 class DecisionResponse(BaseModel if BaseModel is not object else object):
     reply: str
@@ -69,12 +86,32 @@ class Generator:
             for snapshot in live_data:
                 provider = snapshot.get("provider", "Unknown")
                 status = snapshot.get("status", "unknown")
-                data = snapshot.get("data", {})
-                context_blocks.append(f"[Live Source: {provider} | Status: {status}]\n{json.dumps(data, ensure_ascii=False)}")
+                raw_data = snapshot.get("data", {})
+                pruned_data = _prune_snapshot_data(raw_data)
+                context_blocks.append(f"[Live Source: {provider} | Status: {status}]\n{json.dumps(pruned_data, ensure_ascii=False)}")
 
         context_str = "\n\n".join(context_blocks) if context_blocks else "No evidence or live data provided."
+
+        is_thai = language == "th" or any('\u0e00' <= c <= '\u0e7f' for c in original_query)
+        is_japanese = language == "ja" or any('\u3040' <= c <= '\u30ff' or '\u4e00' <= c <= '\u9fff' for c in original_query)
+
+        if is_thai:
+            language_rules = (
+                "CRITICAL LANGUAGE MANDATE (ภาษาไทย 100%):\n"
+                "   - The user query is in Thai. You MUST reply 100% in polite, natural Thai (ภาษาไทย ลงท้ายด้วย 'ค่ะ / นะคะ / สวัสดีค่ะ').\n"
+                "   - TRANSLATION MANDATE: All weather forecasts, meteorological warnings, road conditions, train statuses, and section headings MUST be translated into Thai. NEVER output English headings (e.g. do NOT write 'Weather in Otaru (now)', write 'สภาพอากาศในโอตารุ (ปัจจุบัน)') and NEVER output English bullet points."
+            )
+        elif is_japanese:
+            language_rules = (
+                "CRITICAL LANGUAGE MANDATE (日本語 100%):\n"
+                "   - The user query is in Japanese. You MUST reply 100% in polite, natural Japanese (日本語). Translate all English context into Japanese."
+            )
+        else:
+            language_rules = (
+                "CRITICAL LANGUAGE RULE: You MUST answer the user in English. Always maintain your warm, polite, and reassuring female persona."
+            )
         
-        system_prompt = DECISION_SYSTEM_PROMPT.replace("{context}", context_str).replace("{language}", language)
+        system_prompt = DECISION_SYSTEM_PROMPT.replace("{context}", context_str).replace("{language_rules}", language_rules).replace("{language}", language or "th")
         messages = [{"role": "system", "content": system_prompt}]
         
         recent_history = history[-6:]

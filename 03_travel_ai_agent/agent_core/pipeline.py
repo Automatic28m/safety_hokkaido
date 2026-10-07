@@ -182,8 +182,17 @@ class RAGPipeline:
             )
             live_data_list.append(widget_note)
 
-        # ── GENERATE: node 07 prompt -> Groq -> node 07 parse ───────────────
-        messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list, language=language)
+        # ── LANGUAGE DETECTION ──────────────────────────────────────────────
+        user_lang = request.get("language")
+        if not user_lang:
+            if any('\u0e00' <= c <= '\u0e7f' for c in query):
+                user_lang = "th"
+            elif any('\u3040' <= c <= '\u30ff' or '\u4e00' <= c <= '\u9fff' for c in query):
+                user_lang = "ja"
+            else:
+                user_lang = "en"
+
+        messages = self.generator.format_prompt(query, chat_history, final_chunks, live_data_list, language=user_lang)
         json_string_from_groq, used_model = self._call_groq(messages)
         decision_dict = self.generator.parse_llm_response(json_string_from_groq)
 
@@ -215,21 +224,23 @@ class RAGPipeline:
             payload = {
                 "model": used_model,
                 "messages": messages,
-                "max_tokens": 800,
+                "max_tokens": 2500,
             }
             headers = {
                 "Authorization": f"Bearer {config.GROQ_API_KEY}",
                 "Content-Type": "application/json",
             }
             try:
-                response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=12)
-                # Fallback mechanism if the primary model hits a rate limit or size limit (413/429)
-                if response.status_code in (413, 429):
-                    fallback_model = "qwen/qwen3.8-27b"
-                    print(f"[Fallback] Groq status {response.status_code} on {config.LLM_MODEL}. Switching to alternative model: {fallback_model}...")
-                    payload["model"] = fallback_model
-                    used_model = fallback_model
-                    response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=12)
+                response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=15)
+                # Fallback mechanism if the primary model hits a rate limit, size limit or token exhaustion (400/413/429)
+                if response.status_code in (400, 413, 429, 500, 502, 503):
+                    for fallback_model in ["qwen/qwen3.8-27b", "openai/gpt-oss-20b"]:
+                        print(f"[Fallback] Groq status {response.status_code} on {used_model}. Switching to alternative model: {fallback_model}...")
+                        payload["model"] = fallback_model
+                        used_model = fallback_model
+                        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=15)
+                        if response.status_code == 200:
+                            break
             except Exception as e:
                 print(f"[Groq Exception] {e}")
                 response = None
@@ -244,7 +255,7 @@ class RAGPipeline:
 
         gemini_api_key = getattr(config, "GEMINI_API_KEY", "")
         if needs_gemini and gemini_api_key:
-            gemini_model = getattr(config, "GEMINI_MODEL", "gemini-2.0-flash")
+            gemini_model = getattr(config, "GEMINI_MODEL", "gemini-3.8-flash")
             print(f"[Fallback] Activating Google Gemini ({gemini_model}) as backup...")
             try:
                 gemini_headers = {
@@ -266,21 +277,20 @@ class RAGPipeline:
                 if gemini_res.status_code == 200:
                     content = gemini_res.json()["choices"][0]["message"]["content"]
                     return content, gemini_model
-                elif gemini_res.status_code in [503, 429]:
-                    lite_model = "gemini-1.5-flash"
-                    print(f"[Fallback] Gemini {gemini_model} busy ({gemini_res.status_code}). Switching to {lite_model}...")
-                    gemini_payload["model"] = lite_model
-                    lite_res = requests.post(
-                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-                        headers=gemini_headers,
-                        json=gemini_payload,
-                        timeout=25
-                    )
-                    if lite_res.status_code == 200:
-                        content = lite_res.json()["choices"][0]["message"]["content"]
-                        return content, lite_model
-                    else:
-                        print(f"[Gemini Fallback Error] {lite_res.status_code}: {lite_res.text}")
+                elif gemini_res.status_code in [404, 503, 429]:
+                    for lite_model in ["gemini-1.5-flash", "gemini-2.5-flash"]:
+                        print(f"[Fallback] Gemini {gemini_model} status ({gemini_res.status_code}). Switching to {lite_model}...")
+                        gemini_payload["model"] = lite_model
+                        lite_res = requests.post(
+                            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                            headers=gemini_headers,
+                            json=gemini_payload,
+                            timeout=25
+                        )
+                        if lite_res.status_code == 200:
+                            content = lite_res.json()["choices"][0]["message"]["content"]
+                            return content, lite_model
+                    print(f"[Gemini Fallback Error] {gemini_res.status_code}: {gemini_res.text}")
                 else:
                     print(f"[Gemini Fallback Error] {gemini_res.status_code}: {gemini_res.text}")
             except Exception as e:
