@@ -79,7 +79,7 @@ class NormalizedAskRequest(BaseModel):
     enabled_agents: Dict[str, bool]
     received_at: str
     input_mode: str
-    language: str
+    language: Optional[str] = "th"
 
 
 class RouteIntent(BaseModel):
