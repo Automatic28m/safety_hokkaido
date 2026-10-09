@@ -25,11 +25,6 @@
 *   **Evidence-Based Only:** AI จะต้องใช้เฉพาะ "หลักฐานอ้างอิง" และ "ข้อมูลเรียลไทม์" เท่านั้น หากไม่มีข้อมูล AI ถูกบังคับให้ตอบว่า *"ไม่มีข้อมูลเพียงพอ"* แทนการสุ่มเดา
 *   **Source Citation:** ทุกคำตอบจะมีการแนบ `Evidence ID` หรือ `Live Source` กลับมา เพื่อให้ตรวจสอบย้อนหลังได้เสมอ
 
-## 5. สถาปัตยกรรมและการนำขึ้นระบบจริง (Modern Deployment Architecture)
-*   **Hostinger VPS (Docker Compose):** นำระบบทั้งหมด (Frontend, Backend, AI Models) ขึ้นใช้งานจริงบนแพลตฟอร์ม **Hostinger VPS (Ubuntu + Docker)** เพื่อรองรับการทำงานของโมเดล RAG และเซิร์ฟเวอร์ที่ต้องการ RAM สูง (KVM 2 / 4GB RAM)
-*   **Reverse Proxy & Security:** จัดการ Routing ด้วย Nginx และเข้ารหัส HTTPS ด้วย Certbot
-*   *(อัปเดต)* **Audit & Feedback Module (Node 08):** รองรับฐานข้อมูลแบบ Local (SQLite) เพื่อแก้ปัญหาคอขวดของการเชื่อมต่อฐานข้อมูลภายนอก (Supabase/Neon) ในฝั่ง Local Deployment
-
 ---
 
 # โครงสร้างโฟลเดอร์ของโปรเจกต์ Safety Hokkaido (Project Structure)
