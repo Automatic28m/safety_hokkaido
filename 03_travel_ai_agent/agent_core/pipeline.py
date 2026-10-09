@@ -267,7 +267,7 @@ class RAGPipeline:
                     content = gemini_res.json()["choices"][0]["message"]["content"]
                     return content, gemini_model
                 elif gemini_res.status_code in [503, 429]:
-                    lite_model = "gemini-1.5-flash"
+                    lite_model = "gemini-3.8-flash"
                     print(f"[Fallback] Gemini {gemini_model} busy ({gemini_res.status_code}). Switching to {lite_model}...")
                     gemini_payload["model"] = lite_model
                     lite_res = requests.post(
