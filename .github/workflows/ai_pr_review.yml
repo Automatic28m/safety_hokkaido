@@ -31,17 +31,16 @@ jobs:
         id: get_diff
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
-          # Get the diff between the target branch (develop) and the PR branch
-          DIFF=$(git diff origin/${{ github.event.pull_request.base.ref }}...HEAD)
-          
-          # Use EOF to handle multi-line diffs in GITHUB_ENV safely
-          echo "PR_DIFF<<EOF" >> $GITHUB_ENV
-          echo "$DIFF" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          # Write the diff to a file instead of GITHUB_ENV: a large diff exported as an
+          # environment variable exceeds the Linux argument limit ("Argument list too long")
+          # and every later step fails to start. The reviewer script reads this file.
+          git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > "$RUNNER_TEMP/pr_diff.txt"
+          wc -c "$RUNNER_TEMP/pr_diff.txt"
 
       - name: Run AI Reviewer Script
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PR_DIFF_FILE: ${{ runner.temp }}/pr_diff.txt
         run: python .github/scripts/ai_pr_reviewer.py
 
       - name: Submit Formal PR Review
@@ -52,8 +51,12 @@ jobs:
             const fs = require('fs');
             const reviewText = fs.readFileSync('review_output.md', 'utf8');
             
-            // Determine if the AI approved it based on the expected phrase
-            const isApproved = reviewText.includes('✅ **Approved:');
+            // Determine if the AI approved it based on the expected phrase.
+            // Markdown emphasis is stripped first: the model sometimes writes
+            // "**✅ Approved:" instead of "✅ **Approved:", which used to be read
+            // as a rejection even though the review said no violations were found.
+            const plainText = reviewText.replace(/[*_`]/g, '');
+            const isApproved = /✅\s*Approved:/i.test(plainText);
             const eventType = isApproved ? 'APPROVE' : 'REQUEST_CHANGES';
             
             await github.rest.pulls.createReview({
